@@ -1,5 +1,20 @@
+/* Sara Valleri Architetti — approved typefaces from supplied brand materials */
+@font-face{
+  font-family:"SV Akkurat";
+  src:url("./fonts/akkurat-regular.ttf") format("truetype");
+  font-style:normal;
+  font-weight:400;
+  font-display:swap;
+}
+@font-face{
+  font-family:"SV Apple Garamond";
+  src:url("./fonts/apple-garamond-light.ttf") format("truetype");
+  font-style:normal;
+  font-weight:400;
+  font-display:swap;
+}
 /* Sara Valleri Architetti — minimalist portfolio UAT */
-:root{color-scheme:light;--paper:#f6f5f2;--ink:#272721;--muted:#777770;--rule:#deded8;--rail:clamp(225px,20.5vw,310px);--info:clamp(275px,25vw,365px);--sans:Arial,Helvetica,sans-serif;--serif:Georgia,"Times New Roman",serif}
+:root{color-scheme:light;--paper:#f6f5f2;--ink:#272721;--muted:#777770;--rule:#deded8;--rail:clamp(225px,20.5vw,310px);--info:clamp(275px,25vw,365px);--sans:"SV Akkurat",Arial,Helvetica,sans-serif;--serif:"SV Apple Garamond",Georgia,"Times New Roman",serif}
 *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;font-size:13px;line-height:1.5}a{color:inherit;text-decoration:none}button{font:inherit}img{display:block;max-width:100%}button,a{touch-action:manipulation}button:focus-visible,a:focus-visible{outline:2px solid currentColor;outline-offset:4px}
 .loading{margin:8vw;color:var(--muted)}.site-rail{position:fixed;top:0;bottom:0;left:0;width:var(--rail);z-index:20;background:var(--paper);display:flex;flex-direction:column;justify-content:space-between;padding:38px 34px 29px;border-right:1px solid #e9e7e1}.brand{display:block;width:170px;max-width:100%}.brand img{width:100%;height:auto;max-height:80px;object-fit:contain;object-position:left center}.brand-label{font-size:15px;letter-spacing:.015em;font-weight:500}.rail-links{display:flex;flex-direction:column;align-items:flex-start;gap:12px;margin:0 0 auto;padding-top:clamp(76px,17vh,160px)}.rail-links a{font-size:14px;letter-spacing:-.015em;position:relative;transition:opacity .2s}.rail-links a:hover{opacity:.5}.rail-links a.active::after{content:"";display:inline-block;width:18px;height:1px;background:currentColor;vertical-align:middle;margin-left:9px}.rail-bottom{display:flex;gap:13px;align-items:center}.lang{background:none;border:0;color:#8a8983;cursor:pointer;padding:0;font-size:11px;letter-spacing:.06em}.lang[aria-pressed=true]{color:var(--ink);border-bottom:1px solid var(--ink)}.credit{font-size:10px;color:var(--muted);margin-top:18px}.site-main{margin-left:var(--rail);min-height:100dvh}.eyebrow{font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:var(--muted)}.faded{color:var(--muted)}
 /* Home: photography first. */
@@ -216,5 +231,25 @@
 @media(max-width:400px){
   .is-home .brand{width:142px;height:auto}
   .is-home .rail-links{gap:12px 10px}
+  .is-home .rail-links a{font-size:10.5px}
+}
+
+/* Shared navigation typography: identical on Home, Projects, About and Contact. */
+.rail-links a,
+.is-home .rail-links a{
+  font-family:var(--sans);
+  font-size:12px;
+  font-weight:400;
+  font-style:normal;
+  text-transform:uppercase;
+  letter-spacing:0;
+  line-height:1.6;
+}
+@media(max-width:750px){
+  .rail-links a,
+  .is-home .rail-links a{font-size:11px}
+}
+@media(max-width:400px){
+  .rail-links a,
   .is-home .rail-links a{font-size:10.5px}
 }
