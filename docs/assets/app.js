@@ -41,7 +41,14 @@ function about(){
  return '<section class="simple-page about-page"><div class="about-layout"><figure class="about-visual"><img class="about-image" src="./assets/images/about/portrait.jpg" alt="Sara Valleri Architetti"><figcaption class="caption">Sara Valleri Architetti — Milano</figcaption></figure><aside class="about-copy"><h1 class="section-heading">ABOUT</h1><h2>Sara Valleri</h2><p>'+esc(bio1)+'</p><p>'+esc(bio2)+'</p></aside></div></section>';
 }
 function contact(){
- return '<section class="simple-page contact-page"><div class="contact-center"><h1 class="section-heading">CONTACT</h1><div class="contact-details"><p class="contact-name">Sara Valleri</p><a class="contact-email" href="mailto:sara@svarchitetti.com">sara@svarchitetti.com</a><a class="contact-instagram" href="https://www.instagram.com/svarchitetti/" target="_blank" rel="noopener noreferrer">Instagram</a><p class="contact-vat">P. IVA 04362550164</p></div><p class="contact-location">Milano · Italy</p></div></section>';
+ return '<section class="simple-page contact-page contact-editorial">'
+  +'<h1 class="section-heading">CONTACT</h1>'
+  +'<div class="contact-editorial-main">'
+  +'<a class="editorial-email" href="mailto:sara@svarchitetti.com">sara@svarchitetti.com</a>'
+  +'<a class="editorial-instagram" href="https://www.instagram.com/svarchitetti/" target="_blank" rel="noopener noreferrer">Instagram</a>'
+  +'</div>'
+  +'<div class="contact-editorial-meta"><p>Sara Valleri</p><p>P. IVA 04362550164</p><p>'+t("Milano · Italia","Milan · Italy")+'</p></div>'
+  +'</section>';
 }
 function ensureA28Cover(){const p=site&&site.projects.find(x=>x.coverChunks);if(!p||p._loading||p._ready)return;p._loading=true;Promise.all(p.coverChunks.map(u=>fetch(u).then(r=>{if(!r.ok)throw Error("Cover part unavailable");return r.blob();}))).then(parts=>{const address=URL.createObjectURL(new Blob(parts,{type:"image/jpeg"}));p.cover=address;p.images=[address];p._ready=true;render(false);}).catch(()=>{p._loading=false;console.warn("A 28 cover could not be loaded");});}
 function render(scroll=true){if(!site)return;document.body.classList.toggle("is-home",getRoute().page==="home");document.documentElement.lang=lang;const r=getRoute(),p=site.projects.find(v=>v.id===r.project);let body=r.page==="home"?home(r.preview):r.page==="about"?about():r.page==="contact"?contact():p?detail(p):overview();root.innerHTML=rail(r.page)+'<main class="site-main" id="main">'+body+'</main>';document.title=(p?p.title+" — ":r.page!=="home"?r.page.charAt(0).toUpperCase()+r.page.slice(1)+" — ":"")+"Sara Valleri Architetti";if(scroll)window.scrollTo({top:0,behavior:"instant"});ensureA28Cover();}
