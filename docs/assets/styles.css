@@ -406,3 +406,62 @@
   .contact-details{gap:14px}
   .contact-name{margin-bottom:6px!important}
 }
+
+
+/* Owner review: Contact compact uppercase title and separated rows. */
+.contact-page {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:100dvh;
+}
+.contact-page .contact-center {margin:0 auto;text-align:center}
+.contact-page h1 {
+  font-family:var(--sans);
+  font-size:clamp(20px,2.1vw,26px);
+  font-weight:400;
+  line-height:1.35;
+  text-transform:uppercase;
+  letter-spacing:.1em;
+  margin:0 0 40px;
+}
+.contact-page .contact-details {
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:18px;
+}
+.contact-page .contact-details > * {
+  display:block;
+  margin:0!important;
+}
+.contact-page .contact-details > a {display:block}
+.contact-page .contact-name,
+.contact-page .contact-email,
+.contact-page .contact-instagram {
+  font-family:var(--sans);
+  font-size:15px;
+  font-weight:400;
+  line-height:1.5;
+}
+.contact-page .contact-vat {margin-top:8px!important}
+.contact-page .contact-location {margin-top:16px!important}
+/* Owner review: biography alongside portrait at all viewport widths. */
+@media(max-width:750px) {
+  .about-page .about-layout {
+    grid-template-columns:minmax(0,43fr) minmax(0,57fr);
+    gap:clamp(12px,3vw,20px);
+    align-items:start;
+  }
+  .about-page .about-visual {min-width:0}
+  .about-page .about-image {width:100%;height:auto;max-height:none}
+  .about-page .about-copy {min-width:0;font-size:clamp(11px,1.8vw,13px);line-height:1.65}
+  .about-page .about-copy h2 {font-size:clamp(19px,3.5vw,30px);margin:0 0 14px}
+  .about-page .about-copy p {margin:0 0 14px}
+}
+@media(max-width:400px) {
+  .about-page .about-layout {grid-template-columns:minmax(0,39fr) minmax(0,61fr);gap:10px}
+  .about-page .about-copy {font-size:11px}
+  .about-page .about-copy h2 {font-size:18px}
+  .contact-page h1 {font-size:20px}
+}
