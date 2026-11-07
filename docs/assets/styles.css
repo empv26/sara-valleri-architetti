@@ -44,3 +44,174 @@
 }
 @media(max-width:400px){.site-rail .brand{width:142px}.home-carousel{gap:7px}.home-counter{font-size:10px}}
 @media(prefers-reduced-motion:reduce){.is-home .home-img{animation:none}.home-dot,.home-arrow{transition:none}}
+
+
+/* HOME UAT — overlay full-viewport inspired by Dimorestudio, scoped to HOME only */
+.is-home .site-rail{
+  width:min(360px,100vw);
+  padding:33px 34px 28px;
+  background:transparent;
+  border:0;
+  box-shadow:none;
+  -webkit-backdrop-filter:none;
+  backdrop-filter:none;
+  color:#fff;
+  text-shadow:0 1px 12px rgba(0,0,0,.55);
+  pointer-events:none;
+}
+.is-home .site-rail a,
+.is-home .site-rail button{pointer-events:auto}
+.is-home .brand{
+  width:275px;
+  max-width:100%;
+  height:62px;
+  aspect-ratio:auto;
+  overflow:hidden;
+}
+.is-home .brand img{
+  width:160%;
+  max-width:none;
+  max-height:none;
+  filter:brightness(0) invert(1);
+  mix-blend-mode:screen;
+}
+.is-home .rail-links{
+  padding-top:19px;
+  margin-bottom:auto;
+  gap:5px;
+  align-items:flex-start;
+}
+.is-home .rail-links a{
+  color:#fff;
+  text-transform:uppercase;
+  font-size:12px;
+  line-height:1.6;
+  letter-spacing:0;
+}
+.is-home .rail-links a:last-child{margin-top:18px}
+.is-home .rail-links a.active::after{background:#fff}
+.is-home .rail-bottom .lang{color:rgba(255,255,255,.72)}
+.is-home .rail-bottom .lang[aria-pressed=true]{
+  color:#fff;
+  border-bottom-color:#fff;
+}
+.is-home .rail-bottom .faded{color:rgba(255,255,255,.7)}
+.is-home .credit{
+  position:fixed;
+  right:28px;
+  bottom:18px;
+  margin:0;
+  color:rgba(255,255,255,.95);
+  font-size:10px;
+}
+.is-home .home-page::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:1;
+  pointer-events:none;
+  background:linear-gradient(90deg,rgba(0,0,0,.38) 0%,rgba(0,0,0,.12) 30%,transparent 58%);
+}
+.is-home .home-carousel{
+  position:absolute;
+  inset:0;
+  z-index:5;
+  display:block;
+  filter:none;
+  pointer-events:none;
+}
+.is-home .home-arrow{
+  position:absolute;
+  top:50%;
+  transform:translateY(-50%);
+  display:grid;
+  place-items:center;
+  width:50px;
+  height:72px;
+  padding:0;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  color:#fff;
+  font-size:34px;
+  font-weight:300;
+  line-height:1;
+  text-shadow:0 1px 9px rgba(0,0,0,.62);
+  pointer-events:auto;
+}
+.is-home .home-arrow:hover,
+.is-home .home-arrow:focus-visible{background:rgba(0,0,0,.15)}
+.is-home .home-arrow[data-home-step="-1"]{left:10px}
+.is-home .home-arrow[data-home-step="1"]{right:10px}
+.is-home .home-counter{
+  position:absolute;
+  right:35px;
+  bottom:37px;
+  color:#fff;
+  text-shadow:0 1px 8px rgba(0,0,0,.75);
+  font-size:11px;
+}
+.is-home .home-pager{
+  position:absolute;
+  bottom:40px;
+  left:50%;
+  transform:translateX(-50%);
+  margin:0;
+  pointer-events:auto;
+}
+@media(max-width:750px){
+  .is-home .site-rail{
+    position:fixed;
+    top:0;
+    left:0;
+    right:0;
+    bottom:auto;
+    width:100%;
+    height:auto;
+    min-height:0;
+    padding:18px 18px 12px;
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
+    gap:0;
+    border:0;
+    background:transparent;
+    -webkit-backdrop-filter:none;
+    backdrop-filter:none;
+  }
+  .is-home .brand{
+    width:205px;
+    max-width:calc(100vw - 100px);
+    height:47px;
+    aspect-ratio:auto;
+  }
+  .is-home .rail-links{
+    display:flex;
+    flex-direction:row;
+    flex-wrap:wrap;
+    padding-top:11px;
+    gap:5px 15px;
+    margin:0;
+  }
+  .is-home .rail-links a{font-size:11px;line-height:1.6}
+  .is-home .rail-links a:last-child{margin-top:0}
+  .is-home .rail-bottom{
+    position:absolute;
+    top:21px;
+    right:18px;
+    margin:0;
+  }
+  .is-home .home-arrow{width:40px;height:54px;font-size:28px}
+  .is-home .home-arrow[data-home-step="-1"]{left:0}
+  .is-home .home-arrow[data-home-step="1"]{right:0}
+  .is-home .home-counter{right:18px;bottom:max(20px,env(safe-area-inset-bottom));font-size:10px}
+  .is-home .home-pager{bottom:max(24px,env(safe-area-inset-bottom))}
+  .is-home .home-page::before{
+    background:linear-gradient(180deg,rgba(0,0,0,.4) 0%,rgba(0,0,0,.09) 42%,transparent 70%);
+  }
+}
+@media(max-width:400px){
+  .is-home .brand{width:178px;height:43px}
+  .is-home .rail-links{gap:4px 10px}
+  .is-home .rail-links a{font-size:10.5px}
+}
