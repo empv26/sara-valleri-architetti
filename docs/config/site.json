@@ -1,0 +1,91 @@
+{
+  "siteName": "Sara Valleri Architetti",
+  "contactEmail": "sara@svarchitetti.com",
+  "instagram": "https://www.instagram.com/svarchitetti/",
+  "homeImages": [
+    "./assets/images/home/01.jpg",
+    "./assets/images/home/02.jpg",
+    "./assets/images/home/03.jpg",
+    "./assets/images/home/04.jpg"
+  ],
+  "projects": [
+    {
+      "id": "m64",
+      "title": "M 64",
+      "year": 2023,
+      "city": "Milano",
+      "kindIt": "Residenziale",
+      "kindEn": "Residential",
+      "cover": "./assets/images/projects/m64/cover.jpg",
+      "images": [
+        "./assets/images/projects/m64/cover.jpg"
+      ],
+      "descriptionIt": "All’incrocio tra la vivacità di Brera e lo skyline contemporaneo di Porta Nuova, Via Moscova rappresenta uno degli assi più cosmopoliti e ambiti di Milano. All’interno dell’edificio residenziale progettato da Lombardini22, l’intervento d’interni è stato cucito su misura per le esigenze di una giovane coppia, bilanciando convivialità, funzionalità e rigore estetico. Il living dialoga fluidamente con la cucina grazie a vetrate fumé e volumi sinuosi, mentre la parete libreria a tutta altezza con dettagli metallici e legno scuro definisce lo spazio con carattere grafico. \nDalla loggia privata, intesa come una vera estensione all'aperto rivestita in ceppo di Gré e calde doghe in legno, alle camere con boiserie cannettata e arredi su misura, ogni ambiente esprime un lugo accogliente. Il risultato è un’abitazione fresca e sofisticata, pensata per interpretare i ritmi e la sensibilità dell’abitare urbano contemporaneo.",
+      "descriptionEn": "In Milan's vibrant Moscova district, the interiors of a contemporary residence have been conceived for a young couple. Smoked glass, softly curved volumes and bespoke joinery balance conviviality with a refined, urban character."
+    },
+    {
+      "id": "r14",
+      "title": "R 14",
+      "year": 2024,
+      "city": "Milano",
+      "kindIt": "Residenziale",
+      "kindEn": "Residential",
+      "cover": "./assets/images/projects/r14/cover.jpg",
+      "images": [
+        "./assets/images/projects/r14/cover.jpg"
+      ],
+      "descriptionIt": "Nel cuore storico di Milano, tra il Castello Sforzesco e il Teatro Dal Verme, Via Rovello custodisce una dimensione residenziale riservata e autentica.\n Inserito in un edificio contemporaneo firmato da Arassociati, caratterizzato da logge verdi e una scansione di facciata rigorosa, l’intervento d’interni definisce uno spazio intimo ed essenziale. La zona giorno accoglie la luce naturale attraverso ampie vetrate schermate da tendaggi morbidi, dove toni caldi, superfici tessili a parete e dettagli in ottone dialogano con pezzi iconici del design italiano. \nLa zona notte prosegue la medesima ricerca di comfort e misura, tra boiserie imbottite, arredi su misura e scorci riflessi che amplificano lo spazio. Un progetto di residenza contemporanea che sintetizza il dinamismo del centro milanese in un rifugio silenzioso e sofisticato.",
+      "descriptionEn": "In Milan's historic centre, a private residence combines natural light, warm materials and tailored furnishings. The interior is calm and intimate, with a contemporary elegance that contrasts with the energy of the city outside."
+    },
+    {
+      "id": "g01",
+      "title": "G 01",
+      "year": 2024,
+      "city": "Milano",
+      "kindIt": "Residenziale",
+      "kindEn": "Residential",
+      "cover": "./assets/images/projects/g01/cover.jpg",
+      "images": [
+        "./assets/images/projects/g01/cover.jpg"
+      ],
+      "descriptionIt": "A due passi dal verde di Parco Sempione e dalle atmosfere vibranti dell'Arena Civica, l’intervento definisce un interno raffinato, caratterizzato da un forte rigore materico e chiaroscurale. La zona giorno trova il suo fulcro visivo in una grande parete attrezzata su misura in finitura nuvolata scura, con nicchie e fondale in quarzite/marmo retroilluminato che valorizzano gli arredi e l’area TV. La zona pranzo dialoga fluidamente con una cucina a scomparsa, dove il piano e lo schienale in pietra naturale creano una continuità visiva impreziosita da corpi illuminanti scultorei. Nella zona notte, le tonalità calde e rilassanti delle pareti si uniscono al rigore funzionale di armadiature a specchio bronzato a tutta altezza. I bagni completano la narrazione domestica con una cura sartoriale per i dettagli, tra mobili in noce canaletto sospesi, superfici in gres effetto pietra e specchi retroilluminati a luce soffusa.",
+      "descriptionEn": "Near Parco Sempione, bespoke furniture, dark textured finishes and natural stone shape a sophisticated interior. Carefully balanced lighting and warm tones give the residence a distinctive material identity."
+    },
+    {
+      "id": "g02",
+      "title": "G 02",
+      "year": 2024,
+      "city": "Milano",
+      "kindIt": "Residenziale",
+      "kindEn": "Residential",
+      "cover": "./assets/images/projects/g02/cover.jpg",
+      "images": [
+        "./assets/images/projects/g02/cover.jpg"
+      ],
+      "descriptionIt": "A due passi dal verde di Parco Sempione e dalla monumentalità dell'Arena Civica, il progetto si inserisce in uno dei contesti residenziali più ricercati ed eleganti della città. L’intervento di interior design disegna un’oasi di quiete domestica e benessere, dove la luce naturale modella ambienti fluidi e rilassanti. Il living punta su un’eleganza sobria e minimale, scandita da toni neutri, arredi dalle linee morbide e dettagli accoglienti. Nella camera padronale, una carta da parati a motivi arcuati scalda la parete di fondo creando un'atmosfera intima e raccolta. Il bagno principale è concepito come una vera e propria spa privata, impreziosito dal marmo brecciato a tutta altezza e dalla presenza di una sauna su misura in legno naturale. Un rifugio urbano essenziale e materico, pensato per staccare dal ritmo dinamico della metropoli.",
+      "descriptionEn": "A serene residence near Parco Sempione, where soft forms, neutral colours and natural light create a retreat from the city. A bespoke sauna and richly veined marble lend the master bathroom a spa-like atmosphere."
+    },
+    {
+      "id": "a28",
+      "title": "A 28",
+      "year": 2025,
+      "city": "Milano",
+      "kindIt": "Ristrutturazione",
+      "kindEn": "Renovation",
+      "cover": "./assets/images/projects/a28/cover.jpg",
+      "images": [
+        "./assets/images/projects/a28/cover.jpg"
+      ],
+      "descriptionIt": "Tra le atmosfere residenziali e borghesi di Porta Vittoria e XXII Marzo, il progetto affronta la ristrutturazione completa di un appartamento all'interno di un palazzo d'epoca, caratterizzato da un androne con pavimenti a mosaico e dettagli storici in ferro battuto. L'intervento d'interni instaura un dialogo continuo tra memoria e contemporaneità, valorizzando l'identità originale della dimora attraverso il recupero e l'inserimento di rosoni decorativi in gesso sui soffitti. La rilettura dello spazio si manifesta con particolare forza nei pavimenti, dove il calore del parquet posato a spina incontra la geometria rigorosa di inserti in gres. Gli ambienti combinano proporzioni, offrendo una casa luminosa, materica e dal gusto classico-contemporaneo.",
+      "descriptionEn": "A full renovation of a period apartment in Milan's Porta Vittoria district. Original architectural details meet contemporary finishes, with decorative plasterwork, herringbone parquet and precisely composed materials.",
+      "coverChunks": [
+        "./assets/images/projects/a28/part01.bin",
+        "./assets/images/projects/a28/part02.bin",
+        "./assets/images/projects/a28/part03.bin",
+        "./assets/images/projects/a28/part04.bin",
+        "./assets/images/projects/a28/part05.bin",
+        "./assets/images/projects/a28/part06.bin"
+      ]
+    }
+  ]
+}
