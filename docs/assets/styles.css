@@ -253,3 +253,40 @@
   .rail-links a,
   .is-home .rail-links a{font-size:10.5px}
 }
+
+/* PROJECTS UAT — compact, aligned overview grid (project detail untouched) */
+.overview .project-grid{
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  column-gap:clamp(16px,2vw,28px);
+  row-gap:48px;
+  align-items:start;
+}
+.overview .project-card,
+.overview .project-card:nth-child(3n+2){
+  padding-top:0;
+  align-self:start;
+}
+.overview .project-card .cover-frame{
+  width:100%;
+  aspect-ratio:4/5;
+}
+.overview .project-meta{
+  padding-top:12px;
+}
+@media(max-width:1120px){
+  .overview .project-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    column-gap:20px;
+    row-gap:38px;
+  }
+}
+@media(max-width:750px){
+  .overview .project-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    column-gap:12px;
+    row-gap:28px;
+  }
+  .overview .project-meta{
+    padding-top:9px;
+  }
+}
