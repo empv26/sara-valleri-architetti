@@ -560,8 +560,9 @@
   .about-page .about-copy{font-size:11px}
 }
 
-/* CONTACT — refined minimal layout, grouped rather than spread across the viewport */
+/* CONTACT — one consistent Akkurat type style for every contact detail */
 .contact-page.contact-editorial{
+  --contact-type-size:16px;
   display:flex;
   flex-direction:column;
   align-items:stretch;
@@ -585,26 +586,32 @@
   display:flex;
   flex-direction:column;
   align-items:flex-start;
-  gap:17px;
+  gap:15px;
   margin-top:clamp(76px,11vh,125px);
 }
-.contact-editorial .editorial-email{
-  display:inline-block;
-  max-width:100%;
+/* No separate size, weight, spacing or font family for email, social and studio details. */
+.contact-editorial .editorial-email,
+.contact-editorial .editorial-instagram,
+.contact-editorial .contact-editorial-meta,
+.contact-editorial .contact-editorial-meta p{
   font-family:var(--sans);
-  font-size:clamp(25px,2.25vw,33px);
+  font-size:var(--contact-type-size);
   font-weight:400;
-  line-height:1.25;
-  letter-spacing:-.025em;
+  font-style:normal;
+  line-height:1.6;
+  letter-spacing:0;
+  color:var(--ink);
+  text-transform:none;
+}
+.contact-editorial .editorial-email{
+  display:block;
+  max-width:100%;
   overflow-wrap:anywhere;
 }
 .contact-editorial .editorial-instagram{
   display:inline-block;
   width:max-content;
   max-width:100%;
-  font-family:var(--sans);
-  font-size:14px;
-  line-height:1.5;
   border-bottom:1px solid currentColor;
   padding-bottom:2px;
 }
@@ -615,31 +622,24 @@
   flex-direction:column;
   align-items:flex-start;
   gap:6px;
-  margin-top:clamp(46px,7vh,76px);
+  margin-top:clamp(40px,6vh,65px);
   padding:0;
-  font-family:var(--sans);
-  font-size:12px;
-  line-height:1.6;
-  color:var(--muted);
 }
 .contact-editorial-meta p{margin:0}
-.contact-editorial-meta p:first-child{color:var(--ink)}
 @media(max-width:1030px){
   .contact-page.contact-editorial{padding:32px}
   .contact-editorial-main{margin-top:clamp(66px,10vh,100px)}
 }
 @media(max-width:750px){
   .contact-page.contact-editorial{
+    --contact-type-size:14px;
     min-height:calc(100dvh - 88px);
     padding:30px 20px 42px;
   }
   .contact-editorial > h1.section-heading{font-size:11px}
-  .contact-editorial-main{margin-top:70px;gap:18px}
-  .contact-editorial .editorial-email{font-size:clamp(22px,5vw,28px)}
-  .contact-editorial .editorial-instagram{font-size:14px}
-  .contact-editorial-meta{margin-top:56px;font-size:11px}
+  .contact-editorial-main{margin-top:70px;gap:14px}
+  .contact-editorial-meta{margin-top:48px}
 }
 @media(max-width:400px){
   .contact-page.contact-editorial{padding-left:18px;padding-right:18px}
-  .contact-editorial .editorial-email{font-size:clamp(21px,5.8vw,24px)}
 }
