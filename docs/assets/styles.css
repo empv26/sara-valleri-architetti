@@ -48,8 +48,8 @@
 
 /* HOME UAT — overlay full-viewport inspired by Dimorestudio, scoped to HOME only */
 .is-home .site-rail{
-  width:min(360px,100vw);
-  padding:33px 34px 28px;
+  width:var(--rail);
+  padding:38px 34px 29px;
   background:transparent;
   border:0;
   box-shadow:none;
@@ -62,10 +62,10 @@
 .is-home .site-rail a,
 .is-home .site-rail button{pointer-events:auto}
 .is-home .brand{
-  width:275px;
+  width:min(100%,236px);
   max-width:100%;
-  height:62px;
-  aspect-ratio:auto;
+  height:auto;
+  aspect-ratio:4.85;
   overflow:hidden;
 }
 .is-home .brand img{
@@ -76,9 +76,9 @@
   mix-blend-mode:screen;
 }
 .is-home .rail-links{
-  padding-top:19px;
+  padding-top:clamp(76px,17vh,160px);
   margin-bottom:auto;
-  gap:5px;
+  gap:12px;
   align-items:flex-start;
 }
 .is-home .rail-links a{
@@ -88,7 +88,7 @@
   line-height:1.6;
   letter-spacing:0;
 }
-.is-home .rail-links a:last-child{margin-top:18px}
+.is-home .rail-links a:last-child{margin-top:0}
 .is-home .rail-links a.active::after{background:#fff}
 .is-home .rail-bottom .lang{color:rgba(255,255,255,.72)}
 .is-home .rail-bottom .lang[aria-pressed=true]{
@@ -159,6 +159,9 @@
   margin:0;
   pointer-events:auto;
 }
+@media(max-width:1030px){
+  .is-home .site-rail{padding:29px 25px}
+}
 @media(max-width:750px){
   .is-home .site-rail{
     position:fixed;
@@ -169,7 +172,7 @@
     width:100%;
     height:auto;
     min-height:0;
-    padding:18px 18px 12px;
+    padding:12px 19px 9px;
     display:flex;
     flex-direction:column;
     align-items:flex-start;
@@ -180,25 +183,25 @@
     backdrop-filter:none;
   }
   .is-home .brand{
-    width:205px;
-    max-width:calc(100vw - 100px);
-    height:47px;
-    aspect-ratio:auto;
+    width:154px;
+    max-width:100%;
+    height:auto;
+    aspect-ratio:4.85;
   }
   .is-home .rail-links{
     display:flex;
     flex-direction:row;
     flex-wrap:wrap;
-    padding-top:11px;
-    gap:5px 15px;
+    padding-top:16px;
+    gap:12px 15px;
     margin:0;
   }
   .is-home .rail-links a{font-size:11px;line-height:1.6}
   .is-home .rail-links a:last-child{margin-top:0}
   .is-home .rail-bottom{
     position:absolute;
-    top:21px;
-    right:18px;
+    top:15px;
+    right:19px;
     margin:0;
   }
   .is-home .home-arrow{width:40px;height:54px;font-size:28px}
@@ -211,7 +214,7 @@
   }
 }
 @media(max-width:400px){
-  .is-home .brand{width:178px;height:43px}
-  .is-home .rail-links{gap:4px 10px}
+  .is-home .brand{width:142px;height:auto}
+  .is-home .rail-links{gap:12px 10px}
   .is-home .rail-links a{font-size:10.5px}
 }
