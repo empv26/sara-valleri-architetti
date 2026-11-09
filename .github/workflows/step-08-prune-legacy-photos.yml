@@ -1,0 +1,91 @@
+name: Step 8 - Remove unused JPEG and BIN photos from preview
+
+on:
+  push:
+    branches:
+      - feat/portfolio-preview-v02
+    paths:
+      - .github/workflows/step-08-prune-legacy-photos.yml
+
+permissions:
+  contents: write
+
+jobs:
+  safe-photo-prune:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/portfolio-preview-v02
+
+      - name: Verify every site photo uses an available WebP before deleting originals
+        run: |
+          python -m pip install --disable-pip-version-check Pillow==11.3.0
+          python - <<'PY'
+          from pathlib import Path
+          from PIL import Image
+          import json
+          import re
+
+          site = Path('docs')
+          image_root = site / 'assets/images'
+          config = json.loads((site / 'config/site.json').read_text(encoding='utf-8'))
+          projects = config['projects']
+          assert len(projects) == 5, 'Unexpected project count'
+          assert not any('coverChunks' in p for p in projects), 'A28 still uses image chunks'
+          urls = config['homeImages'] + [p['cover'] for p in projects] + [url for p in projects for url in p['images']]
+          urls.append('./assets/images/about/portrait.webp')
+          distinct = set(urls)
+          assert len(distinct) == 26, f'Expected 26 unique site photos, found {len(distinct)}'
+          assert all(url.startswith('./assets/images/') and url.endswith('.webp') for url in urls), 'Non-WebP asset in configured photographs'
+          for url in distinct:
+              imgpath = site / url.removeprefix('./')
+              assert imgpath.is_file(), f'Referenced image missing: {imgpath}'
+              with Image.open(imgpath) as check:
+                  check.verify()
+                  assert check.format == 'WEBP', f'Not a valid WebP: {imgpath}'
+
+          js = (site / 'assets/app.js').read_text(encoding='utf-8')
+          assert js.count('./assets/images/about/portrait.webp') == 1, 'About portrait WebP not configured'
+          assert 'coverChunks' not in js and 'ensureA28Cover' not in js, 'Legacy A28 loader still in use'
+          for ext in ('*.js','*.css','*.json','*.html'):
+              for code_file in site.rglob(ext):
+                  code = code_file.read_text(encoding='utf-8')
+                  assert not re.search(r'assets/images/[^"\s<>]*\.(?:jpe?g|bin)\b', code, flags=re.I), f'Legacy image reference in {code_file}'
+
+          existing = [p for p in image_root.rglob('*') if p.is_file()]
+          legacy = [p for p in existing if p.suffix.lower() in ('.jpg','.jpeg','.bin')]
+          webps = [p for p in existing if p.suffix.lower() == '.webp']
+          assert len(legacy) == 31, f'Unexpected legacy asset count: {len(legacy)}'
+          assert len(webps) == 26, f'Unexpected WebP asset count: {len(webps)}'
+          assert all(str(p).startswith(str(image_root)) for p in legacy)
+          print(f'PRECHECK OK: {len(distinct)} live WebP photos; {len(legacy)} unused JPEG/BIN files ({sum(p.stat().st_size for p in legacy):,} bytes) to prune')
+          (Path('/tmp/legacy-photo-paths.txt')).write_text('\n'.join(str(p) for p in legacy), encoding='utf-8')
+          PY
+
+      - name: Remove ONLY the 31 verified legacy image assets
+        run: |
+          while IFS= read -r path; do
+            git rm -- "$path"
+          done < /tmp/legacy-photo-paths.txt
+
+          python - <<'PY'
+          from pathlib import Path
+          import subprocess
+          image_root = Path('docs/assets/images')
+          remaining = [str(p) for p in image_root.rglob('*') if p.is_file() and p.suffix.lower() in ('.jpg','.jpeg','.bin')]
+          assert not remaining, f'Legacy image assets remain: {remaining}'
+          deleted = subprocess.check_output(['git','diff','--cached','--name-only','--diff-filter=D'],text=True).splitlines()
+          assert len(deleted) == 31, f'Expected 31 removed paths, got {len(deleted)}'
+          assert all(path.startswith('docs/assets/images/') and path.endswith(('.jpg','.jpeg','.bin')) for path in deleted)
+          assert subprocess.check_output(['git','diff','--cached','--name-only','--diff-filter=AM'],text=True).strip() == '', 'Unexpected file modification'
+          print('CLEANUP OK: 31 legacy source files removed; no source code or WebP files changed')
+          PY
+
+      - name: Commit deletion on preview branch only
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git diff --cached --quiet && exit 0
+          git commit -m "perf(images): remove 31 unused legacy JPEG and BIN assets from preview"
+          git push origin HEAD:feat/portfolio-preview-v02
