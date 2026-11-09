@@ -88,20 +88,12 @@
       "city": "Milano",
       "kindIt": "Ristrutturazione",
       "kindEn": "Renovation",
-      "cover": "./assets/images/projects/a28/cover.jpg",
+      "cover": "./assets/images/projects/a28/cover.webp",
       "images": [
-        "./assets/images/projects/a28/cover.jpg"
+        "./assets/images/projects/a28/cover.webp"
       ],
       "descriptionIt": "Tra le atmosfere residenziali e borghesi di Porta Vittoria e XXII Marzo, il progetto affronta la ristrutturazione completa di un appartamento all'interno di un palazzo d'epoca, caratterizzato da un androne con pavimenti a mosaico e dettagli storici in ferro battuto. L'intervento d'interni instaura un dialogo continuo tra memoria e contemporaneità, valorizzando l'identità originale della dimora attraverso il recupero e l'inserimento di rosoni decorativi in gesso sui soffitti. La rilettura dello spazio si manifesta con particolare forza nei pavimenti, dove il calore del parquet posato a spina incontra la geometria rigorosa di inserti in gres. Gli ambienti combinano proporzioni, offrendo una casa luminosa, materica e dal gusto classico-contemporaneo.",
-      "descriptionEn": "A full renovation of a period apartment in Milan's Porta Vittoria district. Original architectural details meet contemporary finishes, with decorative plasterwork, herringbone parquet and precisely composed materials.",
-      "coverChunks": [
-        "./assets/images/projects/a28/part01.bin",
-        "./assets/images/projects/a28/part02.bin",
-        "./assets/images/projects/a28/part03.bin",
-        "./assets/images/projects/a28/part04.bin",
-        "./assets/images/projects/a28/part05.bin",
-        "./assets/images/projects/a28/part06.bin"
-      ]
+      "descriptionEn": "A full renovation of a period apartment in Milan's Porta Vittoria district. Original architectural details meet contemporary finishes, with decorative plasterwork, herringbone parquet and precisely composed materials."
     }
   ]
 }
