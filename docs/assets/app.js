@@ -37,6 +37,54 @@ function homeStepBase(){
  return Number.isInteger(homeWanted)?homeWanted:Number(sessionStorage.getItem("sv-home-slide")||0);
 }
 
+
+/* STEP 2 — preload only the next page's primary photo on user intent. */
+const warmImageCache=new Map();
+const primaryPageImages={
+ about:"./assets/images/about/portrait.webp",
+ contact:"./assets/images/contact/sara-contact.webp"
+};
+const firstProjectImageDimensions={
+ m64:[1365,2048],
+ r14:[2000,3000],
+ g01:[3000,2000],
+ g02:[2999,2000],
+ a28:[5712,4284]
+};
+function imageDimensions(size){
+ return size?' width="'+size[0]+'" height="'+size[1]+'"':'';
+}
+function warmPageImage(src){
+ if(!src||warmImageCache.has(src))return;
+ const img=new Image();
+ img.decoding="async";
+ img.fetchPriority="low";
+ warmImageCache.set(src,img);
+ img.onerror=()=>{if(warmImageCache.get(src)===img)warmImageCache.delete(src);};
+ img.src=src;
+}
+function warmDestination(target){
+ const link=target&&target.closest?target.closest("a[data-link]"):null;
+ if(!site||!link)return;
+ const href=link.getAttribute("href")||"";
+ if(!href.startsWith("?"))return;
+ const params=new URLSearchParams(href.slice(1));
+ const page=params.get("page");
+ if(primaryPageImages[page]){
+  warmPageImage(primaryPageImages[page]);
+  return;
+ }
+ if(page!=="projects")return;
+ const id=params.get("project");
+ if(id){
+  const project=site.projects.find(p=>p.id===id);
+  if(project)warmPageImage(project.images?.[0]||project.cover);
+  return;
+ }
+ // Overview: do not prefetch all covers; warm just the first two.
+ site.projects.slice(0,2).forEach(p=>warmPageImage(p.cover));
+}
+
 const navItem=(page,label,active)=>'<a href="'+url(page)+'" data-link'+(active?' class="active" aria-current="page"':'')+'>'+label+'</a>';
 function getRoute(){const q=new URLSearchParams(location.search);return{page:routes.includes(q.get("page"))?q.get("page"):"home",project:q.get("project")||"",preview:q.get("preview")==="1"};}
 function rail(page){return '<aside class="site-rail"><a class="brand" href="'+url("home")+'" aria-label="Sara Valleri Architetti — Home"><img src="'+(page==="home"?"./assets/logo-white.svg":"./assets/logo-black.svg")+'" alt="Sara Valleri Architetti"></a><nav class="rail-links" aria-label="'+t("Navigazione principale","Main navigation")+'">'+navItem("projects",t("Projects","Projects"),page==="projects")+navItem("about","About",page==="about")+navItem("contact","Contact",page==="contact")+'<a href="https://www.instagram.com/svarchitetti/" target="_blank" rel="noopener noreferrer">Instagram</a></nav><div class="rail-bottom"><button type="button" class="lang" data-lang="it" aria-pressed="'+(lang==="it")+'">IT</button><span class="faded">/</span><button type="button" class="lang" data-lang="en" aria-pressed="'+(lang==="en")+'">EN</button></div><span class="credit">© '+new Date().getFullYear()+' Sara Valleri Architetti</span></aside>';}
@@ -118,18 +166,18 @@ function advanceHomeSlide(){
   homeWanted=Number(frame.dataset.homeIndex||0);
  });
 }
-function cover(p){return '<span class="cover-frame"><img src="'+esc(p.cover)+'" alt="'+esc(p.title)+' — '+t("copertina progetto","project cover")+'" loading="lazy" onerror=\''+imageError+'\'></span>';}
-function overview(){return '<section class="overview"><div class="topline"><h1 class="section-heading">'+t("PROGETTI","PROJECTS")+'</h1><span class="eyebrow">01 — 05</span></div><div class="project-grid">'+site.projects.map(p=>'<a class="project-card" data-link href="'+url("projects",p.id)+'" aria-label="'+t("Apri il progetto","Open project")+' '+esc(p.title)+'">'+cover(p)+'<div class="project-meta"><strong>'+esc(p.title)+'</strong><small>'+esc(p.city)+' / '+esc(p.year)+'</small></div></a>').join("")+'</div><div class="more">'+t("Architettura, interni, residenziale.","Architecture, interiors, residential.")+'</div></section>';}
-function detail(p){const next=site.projects[(site.projects.indexOf(p)+1)%site.projects.length];const imgs=p.images&&p.images.length?p.images:[p.cover];return '<article class="project-view"><div class="gallery">'+imgs.map((s,i)=>'<figure class="gallery-figure"><img src="'+esc(s)+'" alt="'+esc(p.title)+' — '+t("fotografia","photograph")+' '+(i+1)+'" '+(i?"loading=lazy":"fetchpriority=high")+' onerror=\''+imageError+'\'></figure>').join("")+'</div><aside class="project-info"><a class="back" data-link href="'+url("projects")+'">← '+t("Tutti i progetti","All projects")+'</a><h1>'+esc(p.title)+'</h1><div class="info-meta">'+esc(p.city)+' · '+esc(p.year)+'<br>'+esc(t(p.kindIt,p.kindEn))+'<br>'+t("Committente privato","Private client")+'</div><div class="info-desc">'+esc(t(p.descriptionIt,p.descriptionEn))+'</div><div class="info-footer">'+t("Fotografie","Photography")+': Elena Pegurri<br><a class="next-link" data-link href="'+url("projects",next.id)+'">'+t("Progetto successivo","Next project")+' → '+esc(next.title)+'</a></div></aside></article>';}
+function cover(p,index){const first=index<2;return '<span class="cover-frame"><img src="'+esc(p.cover)+'" alt="'+esc(p.title)+' — '+t("copertina progetto","project cover")+'" loading="'+(first?"eager":"lazy")+'" decoding="async"'+(first?' fetchpriority="high"':'')+' onerror=\''+imageError+'\'></span>';}
+function overview(){return '<section class="overview"><div class="topline"><h1 class="section-heading">'+t("PROGETTI","PROJECTS")+'</h1><span class="eyebrow">01 — 05</span></div><div class="project-grid">'+site.projects.map((p,index)=>'<a class="project-card" data-link href="'+url("projects",p.id)+'" aria-label="'+t("Apri il progetto","Open project")+' '+esc(p.title)+'">'+cover(p,index)+'<div class="project-meta"><strong>'+esc(p.title)+'</strong><small>'+esc(p.city)+' / '+esc(p.year)+'</small></div></a>').join("")+'</div><div class="more">'+t("Architettura, interni, residenziale.","Architecture, interiors, residential.")+'</div></section>';}
+function detail(p){const next=site.projects[(site.projects.indexOf(p)+1)%site.projects.length];const imgs=p.images&&p.images.length?p.images:[p.cover];return '<article class="project-view"><div class="gallery">'+imgs.map((s,i)=>'<figure class="gallery-figure"><img src="'+esc(s)+'" alt="'+esc(p.title)+' — '+t("fotografia","photograph")+' '+(i+1)+'" '+(i?'loading="lazy" decoding="async"':'loading="eager" decoding="async" fetchpriority="high"'+imageDimensions(firstProjectImageDimensions[p.id]))+' onerror=\''+imageError+'\'></figure>').join("")+'</div><aside class="project-info"><a class="back" data-link href="'+url("projects")+'">← '+t("Tutti i progetti","All projects")+'</a><h1>'+esc(p.title)+'</h1><div class="info-meta">'+esc(p.city)+' · '+esc(p.year)+'<br>'+esc(t(p.kindIt,p.kindEn))+'<br>'+t("Committente privato","Private client")+'</div><div class="info-desc">'+esc(t(p.descriptionIt,p.descriptionEn))+'</div><div class="info-footer">'+t("Fotografie","Photography")+': Elena Pegurri<br><a class="next-link" data-link href="'+url("projects",next.id)+'">'+t("Progetto successivo","Next project")+' → '+esc(next.title)+'</a></div></aside></article>';}
 function about(){
  const bio1=t("Sono un’architetta freelance con sede a Milano, laureata in Architettura al Politecnico di Milano. Mi occupo di progettazione architettonica e interior design, con particolare attenzione agli spazi residenziali.","I am a freelance architect based in Milan. I graduated in Architecture from Politecnico di Milano and work in architectural design and interior design, with a particular focus on residential spaces.");
  const bio2=t("Nel mio lavoro cerco un equilibrio tra sensibilità estetica, funzionalità e cura del dettaglio, dando forma ad ambienti essenziali, armoniosi e pensati su misura. Il mio percorso professionale è legato anche a SV Architetti, a Milano.","In my work, I seek a balance between aesthetic sensitivity, functionality and attention to detail, creating essential, harmonious spaces tailored to each project. My professional path is also connected with SV Architetti in Milan.");
- return '<section class="simple-page about-page"><div class="about-layout"><figure class="about-visual"><img class="about-image" src="./assets/images/about/portrait.webp" alt="Sara Valleri Architetti"><figcaption class="caption">Sara Valleri Architetti — Milano</figcaption></figure><aside class="about-copy"><h1 class="section-heading">ABOUT</h1><h2>Sara Valleri</h2><p>'+esc(bio1)+'</p><p>'+esc(bio2)+'</p></aside></div></section>';
+ return '<section class="simple-page about-page"><div class="about-layout"><figure class="about-visual"><img class="about-image" src="./assets/images/about/portrait.webp" width="2000" height="2999" loading="eager" decoding="async" fetchpriority="high" alt="Sara Valleri Architetti"><figcaption class="caption">Sara Valleri Architetti — Milano</figcaption></figure><aside class="about-copy"><h1 class="section-heading">ABOUT</h1><h2>Sara Valleri</h2><p>'+esc(bio1)+'</p><p>'+esc(bio2)+'</p></aside></div></section>';
 }
 function contact(){
  return '<section class="simple-page contact-page contact-editorial">'
   +'<div class="contact-layout">'
-  +'<figure class="contact-visual"><img class="contact-image" src="./assets/images/contact/sara-contact.webp" alt="'+t("Immagine per i contatti di Sara Valleri Architetti","Image for Sara Valleri Architetti contact page")+'" fetchpriority="high"><figcaption class="caption">Sara Valleri Architetti — Milano</figcaption></figure>'
+  +'<figure class="contact-visual"><img class="contact-image" src="./assets/images/contact/sara-contact.webp" width="2000" height="3001" loading="eager" decoding="async" alt="'+t("Immagine per i contatti di Sara Valleri Architetti","Image for Sara Valleri Architetti contact page")+'" fetchpriority="high"><figcaption class="caption">Sara Valleri Architetti — Milano</figcaption></figure>'
   +'<div class="contact-copy">'
   +'<h1 class="section-heading">CONTACT</h1>'
   +'<div class="contact-editorial-main">'
@@ -141,6 +189,9 @@ function contact(){
   +'</section>';
 }
 function render(scroll=true){if(!site)return;homeViewId++;homeSwitching=false;homeWanted=null;document.body.classList.toggle("is-home",getRoute().page==="home");document.documentElement.lang=lang;const r=getRoute(),p=site.projects.find(v=>v.id===r.project);let body=r.page==="home"?home(r.preview):r.page==="about"?about():r.page==="contact"?contact():p?detail(p):overview();root.innerHTML=rail(r.page)+'<main class="site-main" id="main">'+body+'</main>';document.title=(p?p.title+" — ":r.page!=="home"?r.page.charAt(0).toUpperCase()+r.page.slice(1)+" — ":"")+"Sara Valleri Architetti";if(r.page==="home"){const frame=document.querySelector(".home-page");homeWanted=Number(frame?.dataset.homeIndex||0);preloadAllHomePhotos();}if(scroll)window.scrollTo({top:0,behavior:"instant"});}
+document.addEventListener("pointerover",ev=>warmDestination(ev.target));
+document.addEventListener("focusin",ev=>warmDestination(ev.target));
+document.addEventListener("pointerdown",ev=>warmDestination(ev.target));
 document.addEventListener("click",ev=>{const language=ev.target.closest("[data-lang]");if(language){lang=language.getAttribute("data-lang");localStorage.setItem("sv-lang",lang);render(false);return;}const pic=ev.target.closest("[data-hero]");if(pic){goHomeSlide(Number(pic.getAttribute("data-hero")));return;}const step=ev.target.closest("[data-home-step]");if(step){goHomeSlide(homeStepBase()+Number(step.getAttribute("data-home-step")));return;}const a=ev.target.closest("a[data-link],a.brand");if(a&&a.origin===location.origin){ev.preventDefault();history.pushState(null,"",a.getAttribute("href"));render();}});
 let lastHomeWheel=0;
 window.addEventListener("wheel",ev=>{
