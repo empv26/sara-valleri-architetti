@@ -1,0 +1,100 @@
+name: Step 6 - Rebuild single A28 photo as WebP
+
+on:
+  push:
+    branches:
+      - feat/portfolio-preview-v02
+    paths:
+      - .github/workflows/step-06-a28-webp.yml
+
+permissions:
+  contents: write
+
+jobs:
+  a28-one-photo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/portfolio-preview-v02
+
+      - name: Rebuild A28 JPEG, convert to WebP and update the single image reference
+        run: |
+          python -m pip install --disable-pip-version-check Pillow==11.3.0
+          python - <<'PY'
+          import copy
+          import io
+          import json
+          from pathlib import Path
+          from PIL import Image, ImageOps, features
+
+          assert features.check('webp'), 'WebP encoder not installed'
+          folder = Path('docs/assets/images/projects/a28')
+          config_file = Path('docs/config/site.json')
+          app_file = Path('docs/assets/app.js')
+          old_config_text = config_file.read_text(encoding='utf-8')
+          before = json.loads(old_config_text)
+          project = next(p for p in before['projects'] if p['id'] == 'a28')
+          chunks = [folder / f'part{i:02d}.bin' for i in range(1, 7)]
+          expected_chunk_urls = [f'./assets/images/projects/a28/part{i:02d}.bin' for i in range(1, 7)]
+          old_url = './assets/images/projects/a28/cover.jpg'
+          new_url = './assets/images/projects/a28/cover.webp'
+          assert project['coverChunks'] == expected_chunk_urls, 'Unexpected original A28 source parts'
+          assert project['cover'] == old_url and project['images'] == [old_url], 'A28 is not configured for one photo'
+          assert all(part.is_file() for part in chunks), 'Missing source image chunk'
+          target = folder / 'cover.webp'
+          assert not target.exists(), 'WebP already exists'
+
+          original_data = b''.join(part.read_bytes() for part in chunks)
+          original_bytes = len(original_data)
+          with Image.open(io.BytesIO(original_data)) as source:
+              source.load()
+              assert source.format == 'JPEG', 'Source parts do not combine into a JPEG'
+              photograph = ImageOps.exif_transpose(source)
+              dimensions = photograph.size
+              params = {'format': 'WEBP', 'quality': 86, 'method': 6}
+              if source.info.get('icc_profile'):
+                  params['icc_profile'] = source.info['icc_profile']
+              photograph.convert('RGB').save(target, **params)
+
+          with Image.open(target) as test:
+              test.load()
+              assert test.format == 'WEBP'
+              assert test.size == dimensions, 'A28 dimensions were changed'
+          assert target.stat().st_size < original_bytes, 'WebP would not reduce loading size'
+
+          after = copy.deepcopy(before)
+          new_project = next(p for p in after['projects'] if p['id'] == 'a28')
+          new_project['cover'] = new_url
+          new_project['images'] = [new_url]
+          del new_project['coverChunks']
+          assert after['homeImages'] == before['homeImages'], 'Home altered'
+          assert {p['id']:p for p in after['projects'] if p['id']!='a28'} == {p['id']:p for p in before['projects'] if p['id']!='a28'}, 'Other project altered'
+
+          assert old_config_text.count(old_url) == 2, 'A28 photo URL occurrence count changed'
+          block = '      "coverChunks": [\n' + ',\n'.join('        "' + path + '"' for path in expected_chunk_urls) + '\n      ]'
+          assert old_config_text.count(',\n' + block) == 1, 'A28 coverChunks block not found'
+          new_config_text = old_config_text.replace(old_url, new_url).replace(',\n' + block, '')
+          assert json.loads(new_config_text) == after, 'Config update changed unintended content'
+          config_file.write_text(new_config_text, encoding='utf-8')
+
+          js = app_file.read_text(encoding='utf-8')
+          lines = js.splitlines(keepends=True)
+          target_lines = [line for line in lines if line.startswith('function ensureA28Cover(){')]
+          assert len(target_lines) == 1, 'Could not uniquely identify A28 chunk loading function'
+          assert js.count('ensureA28Cover();') == 1, 'Could not uniquely identify A28 loader invocation'
+          js = ''.join(line for line in lines if not line.startswith('function ensureA28Cover(){'))
+          js = js.replace('ensureA28Cover();', '')
+          assert 'coverChunks' not in js and 'ensureA28Cover' not in js
+          app_file.write_text(js, encoding='utf-8')
+          print(f'A28 single photo: {original_bytes:,} bytes JPEG chunks -> {target.stat().st_size:,} bytes WebP, {dimensions[0]}x{dimensions[1]} pixels')
+          PY
+
+      - name: Commit A28 WebP, reference and loader removal
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/assets/images/projects/a28/cover.webp docs/config/site.json docs/assets/app.js
+          git diff --cached --quiet && exit 0
+          git commit -m "perf(a28): use one optimized WebP instead of six runtime chunks"
+          git push origin HEAD:feat/portfolio-preview-v02
