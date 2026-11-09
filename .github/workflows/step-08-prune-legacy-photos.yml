@@ -60,7 +60,7 @@ jobs:
           assert len(webps) == 26, f'Unexpected WebP asset count: {len(webps)}'
           assert all(str(p).startswith(str(image_root)) for p in legacy)
           print(f'PRECHECK OK: {len(distinct)} live WebP photos; {len(legacy)} unused JPEG/BIN files ({sum(p.stat().st_size for p in legacy):,} bytes) to prune')
-          (Path('/tmp/legacy-photo-paths.txt')).write_text('\n'.join(str(p) for p in legacy), encoding='utf-8')
+          (Path('/tmp/legacy-photo-paths.txt')).write_text('\n'.join(str(p) for p in legacy) + '\n', encoding='utf-8')
           PY
 
       - name: Remove ONLY the 31 verified legacy image assets
