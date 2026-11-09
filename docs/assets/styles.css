@@ -758,3 +758,19 @@
   filter:none;
   mix-blend-mode:normal;
 }
+
+/* STEP 1: Crossfade only decoded Home photos; never expose the page background. */
+.is-home .home-img{
+ animation:none;
+}
+.is-home .home-img-incoming{
+ opacity:0;
+ transition:opacity .65s ease;
+ will-change:opacity;
+}
+.is-home .home-img-incoming.is-visible{
+ opacity:1;
+}
+@media (prefers-reduced-motion: reduce){
+ .is-home .home-img-incoming{transition:none}
+}
