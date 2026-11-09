@@ -49,13 +49,15 @@ jobs:
           original_bytes = len(original_data)
           with Image.open(io.BytesIO(original_data)) as source:
               source.load()
-              assert source.format == 'JPEG', 'Source parts do not combine into a JPEG'
+              assert source.format in ('JPEG', 'PNG', 'WEBP', 'TIFF'), f'Unsupported image source format: {source.format}'
+              print(f'A28 original image format: {source.format}')
               photograph = ImageOps.exif_transpose(source)
               dimensions = photograph.size
               params = {'format': 'WEBP', 'quality': 86, 'method': 6}
               if source.info.get('icc_profile'):
                   params['icc_profile'] = source.info['icc_profile']
-              photograph.convert('RGB').save(target, **params)
+              mode = 'RGBA' if 'A' in photograph.getbands() or (photograph.mode == 'P' and 'transparency' in photograph.info) else 'RGB'
+              photograph.convert(mode).save(target, **params)
 
           with Image.open(target) as test:
               test.load()
