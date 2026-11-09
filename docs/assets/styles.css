@@ -710,23 +710,25 @@
   .contact-page.contact-editorial{--contact-type-size:clamp(11px,2.8vw,13px)}
 }
 
-/* Project gallery — desktop: aligned frames with every complete photo fitting
-   within the screen height, no cropping, with 44px between photos.
-   Narrow portraits are letterboxed horizontally rather than stretched. */
+/* Project gallery desktop: ONE common visual width for every photograph.
+   A 2:3 portrait stays within the viewport (44px height reserve); landscapes
+   have the same left/right edges. No cropping, distortion or mobile changes. */
 @media(min-width:751px){
   .project-view .gallery{
+    width:min(100%,calc(66.6667vh - 30px));
+    width:min(100%,calc(66.6667dvh - 30px));
+    margin-inline:auto;
+    min-width:0;
     padding-bottom:0;
   }
   .project-view .gallery-figure{
-    display:flex;
-    align-items:center;
-    justify-content:center;
+    display:block;
     width:100%;
     height:auto;
     min-height:0;
     margin:0 0 44px;
     overflow:visible;
-    background:var(--paper);
+    background:transparent;
   }
   .project-view .gallery-figure:last-child{
     margin-bottom:0;
@@ -736,9 +738,7 @@
     width:100%;
     height:auto;
     max-width:100%;
-    max-height:calc(100vh - 44px);
-    max-height:calc(100dvh - 44px);
-    object-fit:contain;
-    object-position:center center;
+    max-height:none;
+    object-fit:initial;
   }
 }
