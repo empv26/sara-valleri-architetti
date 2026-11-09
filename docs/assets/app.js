@@ -42,12 +42,16 @@ function about(){
 }
 function contact(){
  return '<section class="simple-page contact-page contact-editorial">'
+  +'<div class="contact-layout">'
+  +'<figure class="contact-visual"><img class="contact-image" src="./assets/images/contact/sara-contact.webp" alt="'+t("Immagine per i contatti di Sara Valleri Architetti","Image for Sara Valleri Architetti contact page")+'" fetchpriority="high"><figcaption class="caption">Sara Valleri Architetti — Milano</figcaption></figure>'
+  +'<div class="contact-copy">'
   +'<h1 class="section-heading">CONTACT</h1>'
   +'<div class="contact-editorial-main">'
   +'<a class="editorial-email" href="mailto:sara@svarchitetti.com">sara@svarchitetti.com</a>'
   +'<a class="editorial-instagram" href="https://www.instagram.com/svarchitetti/" target="_blank" rel="noopener noreferrer">Instagram</a>'
   +'</div>'
   +'<div class="contact-editorial-meta"><p>Sara Valleri</p><p>P. IVA 04362550164</p><p>'+t("Milano · Italia","Milan · Italy")+'</p></div>'
+  +'</div></div>'
   +'</section>';
 }
 function render(scroll=true){if(!site)return;document.body.classList.toggle("is-home",getRoute().page==="home");document.documentElement.lang=lang;const r=getRoute(),p=site.projects.find(v=>v.id===r.project);let body=r.page==="home"?home(r.preview):r.page==="about"?about():r.page==="contact"?contact():p?detail(p):overview();root.innerHTML=rail(r.page)+'<main class="site-main" id="main">'+body+'</main>';document.title=(p?p.title+" — ":r.page!=="home"?r.page.charAt(0).toUpperCase()+r.page.slice(1)+" — ":"")+"Sara Valleri Architetti";if(scroll)window.scrollTo({top:0,behavior:"instant"});}
