@@ -168,7 +168,7 @@ function advanceHomeSlide(){
 }
 function cover(p,index){const first=index<2;return '<span class="cover-frame"><img src="'+esc(p.cover)+'" alt="'+esc(p.title)+' — '+t("copertina progetto","project cover")+'" loading="'+(first?"eager":"lazy")+'" decoding="async"'+(first?' fetchpriority="high"':'')+' onerror=\''+imageError+'\'></span>';}
 function overview(){return '<section class="overview"><div class="topline"><h1 class="section-heading">'+t("PROGETTI","PROJECTS")+'</h1><span class="eyebrow">01 — 05</span></div><div class="project-grid">'+site.projects.map((p,index)=>'<a class="project-card" data-link href="'+url("projects",p.id)+'" aria-label="'+t("Apri il progetto","Open project")+' '+esc(p.title)+'">'+cover(p,index)+'<div class="project-meta"><strong>'+esc(p.title)+'</strong><small>'+esc(p.city)+' / '+esc(p.year)+'</small></div></a>').join("")+'</div><div class="more">'+t("Architettura, interni, residenziale.","Architecture, interiors, residential.")+'</div></section>';}
-function detail(p){const next=site.projects[(site.projects.indexOf(p)+1)%site.projects.length];const imgs=p.images&&p.images.length?p.images:[p.cover];return '<article class="project-view"><div class="gallery">'+imgs.map((s,i)=>'<figure class="gallery-figure"><img src="'+esc(s)+'" alt="'+esc(p.title)+' — '+t("fotografia","photograph")+' '+(i+1)+'" '+(i?'loading="lazy" decoding="async"':'loading="eager" decoding="async" fetchpriority="high"'+imageDimensions(firstProjectImageDimensions[p.id]))+' onerror=\''+imageError+'\'></figure>').join("")+'</div><aside class="project-info"><a class="back" data-link href="'+url("projects")+'">← '+t("Tutti i progetti","All projects")+'</a><h1>'+esc(p.title)+'</h1><div class="info-meta">'+esc(p.city)+' · '+esc(p.year)+'<br>'+esc(t(p.kindIt,p.kindEn))+'<br>'+t("Committente privato","Private client")+'</div><div class="info-desc">'+esc(t(p.descriptionIt,p.descriptionEn))+'</div><div class="info-footer">'+t("Fotografie","Photography")+': Elena Pegurri<br><a class="next-link" data-link href="'+url("projects",next.id)+'">'+t("Progetto successivo","Next project")+' → '+esc(next.title)+'</a></div></aside></article>';}
+function detail(p){const next=site.projects[(site.projects.indexOf(p)+1)%site.projects.length];const imgs=p.images&&p.images.length?p.images:[p.cover];return '<article class="project-view"><div class="gallery">'+imgs.map((s,i)=>'<figure class="gallery-figure"><img data-gallery-index="'+i+'" role="button" tabindex="0" aria-label="'+t("Apri foto a schermo intero","Open photo fullscreen")+' '+(i+1)+' — '+esc(p.title)+'" src="'+esc(s)+'" alt="'+esc(p.title)+' — '+t("fotografia","photograph")+' '+(i+1)+'" '+(i?'loading="lazy" decoding="async"':'loading="eager" decoding="async" fetchpriority="high"'+imageDimensions(firstProjectImageDimensions[p.id]))+' onerror=\''+imageError+'\'></figure>').join("")+'</div><aside class="project-info"><a class="back" data-link href="'+url("projects")+'">← '+t("Tutti i progetti","All projects")+'</a><h1>'+esc(p.title)+'</h1><div class="info-meta">'+esc(p.city)+' · '+esc(p.year)+'<br>'+esc(t(p.kindIt,p.kindEn))+'<br>'+t("Committente privato","Private client")+'</div><div class="info-desc">'+esc(t(p.descriptionIt,p.descriptionEn))+'</div><div class="info-footer">'+t("Fotografie","Photography")+': Elena Pegurri<br><a class="next-link" data-link href="'+url("projects",next.id)+'">'+t("Progetto successivo","Next project")+' → '+esc(next.title)+'</a></div></aside></article>';}
 function about(){
  const bio1=t("Sono un’architetta freelance con sede a Milano, laureata in Architettura al Politecnico di Milano. Mi occupo di progettazione architettonica e interior design, con particolare attenzione agli spazi residenziali.","I am a freelance architect based in Milan. I graduated in Architecture from Politecnico di Milano and work in architectural design and interior design, with a particular focus on residential spaces.");
  const bio2=t("Nel mio lavoro cerco un equilibrio tra sensibilità estetica, funzionalità e cura del dettaglio, dando forma ad ambienti essenziali, armoniosi e pensati su misura. Il mio percorso professionale è legato anche a SV Architetti, a Milano.","In my work, I seek a balance between aesthetic sensitivity, functionality and attention to detail, creating essential, harmonious spaces tailored to each project. My professional path is also connected with SV Architetti in Milan.");
@@ -188,11 +188,135 @@ function contact(){
   +'</div></div>'
   +'</section>';
 }
-function render(scroll=true){if(!site)return;homeViewId++;homeSwitching=false;homeWanted=null;document.body.classList.toggle("is-home",getRoute().page==="home");document.documentElement.lang=lang;const r=getRoute(),p=site.projects.find(v=>v.id===r.project);let body=r.page==="home"?home(r.preview):r.page==="about"?about():r.page==="contact"?contact():p?detail(p):overview();root.innerHTML=rail(r.page)+'<main class="site-main" id="main">'+body+'</main>';document.title=(p?p.title+" — ":r.page!=="home"?r.page.charAt(0).toUpperCase()+r.page.slice(1)+" — ":"")+"Sara Valleri Architetti";if(r.page==="home"){const frame=document.querySelector(".home-page");homeWanted=Number(frame?.dataset.homeIndex||0);preloadAllHomePhotos();}if(scroll)window.scrollTo({top:0,behavior:"instant"});}
+
+/* STEP 3 — project-only fullscreen photo viewer.
+   It never changes the source gallery, photo order or scroll position. */
+let projectLightbox=null;
+function closeProjectLightbox(){
+ const state=projectLightbox;
+ if(!state)return;
+ projectLightbox=null;
+ state.requestId++;
+ state.overlay.remove();
+ document.body.style.overflow=state.previousOverflow;
+ if(state.trigger&&state.trigger.isConnected)state.trigger.focus({preventScroll:true});
+}
+function openProjectLightbox(project,index,trigger){
+ const photos=project.images?.length?project.images:[project.cover];
+ if(!photos.length||index<0||index>=photos.length)return;
+ closeProjectLightbox();
+ const overlay=document.createElement("div");
+ overlay.className="sv-lightbox";
+ overlay.setAttribute("role","dialog");
+ overlay.setAttribute("aria-modal","true");
+ overlay.setAttribute("aria-label",t("Galleria fotografica","Photo gallery")+" — "+project.title);
+ const navigation=photos.length>1
+  ?'<button type="button" class="sv-lightbox-arrow sv-lightbox-prev" data-lightbox-prev aria-label="'+t("Foto precedente","Previous photo")+'">&#8249;</button><button type="button" class="sv-lightbox-arrow sv-lightbox-next" data-lightbox-next aria-label="'+t("Foto successiva","Next photo")+'">&#8250;</button>'
+  :"";
+ overlay.innerHTML='<button type="button" class="sv-lightbox-close" data-lightbox-close aria-label="'+t("Chiudi galleria","Close gallery")+'">&times;</button>'
+  +'<div class="sv-lightbox-stage" data-lightbox-stage><img class="sv-lightbox-image" src="'+esc(photos[index])+'" alt="'+esc(project.title)+' — '+t("fotografia","photograph")+' '+(index+1)+'" draggable="false"></div>'
+  +navigation
+  +'<span class="sv-lightbox-sr" aria-live="polite" data-lightbox-status></span>';
+ const state={
+  overlay,photos,index,wanted:index,requestId:0,trigger,
+  previousOverflow:document.body.style.overflow,
+  title:project.title
+ };
+ projectLightbox=state;
+ document.body.appendChild(overlay);
+ document.body.style.overflow="hidden";
+ const status=overlay.querySelector("[data-lightbox-status]");
+ status.textContent=t("Fotografia","Photograph")+" "+(index+1)+" / "+photos.length;
+ overlay.querySelector("[data-lightbox-close]").focus({preventScroll:true});
+ let touchStart=null;
+ overlay.addEventListener("touchstart",event=>{
+  if(event.touches.length!==1)return;
+  touchStart={x:event.touches[0].clientX,y:event.touches[0].clientY};
+ },{passive:true});
+ overlay.addEventListener("touchend",event=>{
+  if(!touchStart||event.changedTouches.length!==1)return;
+  const dx=event.changedTouches[0].clientX-touchStart.x;
+  const dy=event.changedTouches[0].clientY-touchStart.y;
+  touchStart=null;
+  if(Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy)*1.25)moveProjectLightbox(dx<0?1:-1);
+ },{passive:true});
+}
+function moveProjectLightbox(delta){
+ const state=projectLightbox;
+ if(!state||state.photos.length<2)return;
+ const next=(state.wanted+delta+state.photos.length)%state.photos.length;
+ state.wanted=next;
+ const token=++state.requestId;
+ const source=state.photos[next];
+ const ready=new Image();
+ ready.decoding="async";
+ ready.onload=()=>{
+  const decode=typeof ready.decode==="function"?ready.decode().catch(()=>{}):Promise.resolve();
+  decode.then(()=>{
+   if(projectLightbox!==state||token!==state.requestId)return;
+   const image=state.overlay.querySelector(".sv-lightbox-image");
+   if(!image)return;
+   image.src=source;
+   image.alt=state.title+" — "+t("fotografia","photograph")+" "+(next+1);
+   state.index=next;
+   state.overlay.querySelector("[data-lightbox-status]").textContent=t("Fotografia","Photograph")+" "+(next+1)+" / "+state.photos.length;
+  });
+ };
+ ready.onerror=()=>{
+  if(projectLightbox!==state||token!==state.requestId)return;
+  state.wanted=state.index;
+  state.overlay.querySelector("[data-lightbox-status]").textContent=t("Impossibile caricare la fotografia","Unable to load photograph");
+ };
+ ready.src=source;
+}
+
+function render(scroll=true){if(!site)return;closeProjectLightbox();homeViewId++;homeSwitching=false;homeWanted=null;document.body.classList.toggle("is-home",getRoute().page==="home");document.documentElement.lang=lang;const r=getRoute(),p=site.projects.find(v=>v.id===r.project);let body=r.page==="home"?home(r.preview):r.page==="about"?about():r.page==="contact"?contact():p?detail(p):overview();root.innerHTML=rail(r.page)+'<main class="site-main" id="main">'+body+'</main>';document.title=(p?p.title+" — ":r.page!=="home"?r.page.charAt(0).toUpperCase()+r.page.slice(1)+" — ":"")+"Sara Valleri Architetti";if(r.page==="home"){const frame=document.querySelector(".home-page");homeWanted=Number(frame?.dataset.homeIndex||0);preloadAllHomePhotos();}if(scroll)window.scrollTo({top:0,behavior:"instant"});}
 document.addEventListener("pointerover",ev=>warmDestination(ev.target));
 document.addEventListener("focusin",ev=>warmDestination(ev.target));
 document.addEventListener("pointerdown",ev=>warmDestination(ev.target));
-document.addEventListener("click",ev=>{const language=ev.target.closest("[data-lang]");if(language){lang=language.getAttribute("data-lang");localStorage.setItem("sv-lang",lang);render(false);return;}const pic=ev.target.closest("[data-hero]");if(pic){goHomeSlide(Number(pic.getAttribute("data-hero")));return;}const step=ev.target.closest("[data-home-step]");if(step){goHomeSlide(homeStepBase()+Number(step.getAttribute("data-home-step")));return;}const a=ev.target.closest("a[data-link],a.brand");if(a&&a.origin===location.origin){ev.preventDefault();history.pushState(null,"",a.getAttribute("href"));render();}});
+document.addEventListener("click",ev=>{
+ const viewer=ev.target.closest(".sv-lightbox");
+ if(viewer){
+  if(ev.target.closest("[data-lightbox-close]")||ev.target===viewer||ev.target.hasAttribute("data-lightbox-stage"))closeProjectLightbox();
+  else if(ev.target.closest("[data-lightbox-prev]"))moveProjectLightbox(-1);
+  else if(ev.target.closest("[data-lightbox-next]"))moveProjectLightbox(1);
+  return;
+ }
+ const target=ev.target.closest(".project-view .gallery-figure img[data-gallery-index]");
+ if(target){
+  const route=getRoute();
+  const project=site?.projects.find(p=>p.id===route.project);
+  if(project)openProjectLightbox(project,Number(target.dataset.galleryIndex),target);
+  return;
+ }
+ const language=ev.target.closest("[data-lang]");if(language){lang=language.getAttribute("data-lang");localStorage.setItem("sv-lang",lang);render(false);return;}const pic=ev.target.closest("[data-hero]");if(pic){goHomeSlide(Number(pic.getAttribute("data-hero")));return;}const step=ev.target.closest("[data-home-step]");if(step){goHomeSlide(homeStepBase()+Number(step.getAttribute("data-home-step")));return;}const a=ev.target.closest("a[data-link],a.brand");if(a&&a.origin===location.origin){ev.preventDefault();history.pushState(null,"",a.getAttribute("href"));render();}});
+
+/* Fullscreen gallery keyboard support and focus containment. */
+window.addEventListener("keydown",event=>{
+ const state=projectLightbox;
+ if(!state||event.altKey||event.ctrlKey||event.metaKey)return;
+ if(event.key==="Escape"){event.preventDefault();closeProjectLightbox();return;}
+ if(event.key==="ArrowLeft"||event.key==="ArrowRight"){
+  event.preventDefault();moveProjectLightbox(event.key==="ArrowRight"?1:-1);return;
+ }
+ if(event.key==="Tab"){
+  const buttons=Array.from(state.overlay.querySelectorAll("button"));
+  const current=buttons.indexOf(document.activeElement);
+  if(!buttons.length)return;
+  if(event.shiftKey&&current<=0){event.preventDefault();buttons[buttons.length-1].focus();}
+  else if(!event.shiftKey&&current===buttons.length-1){event.preventDefault();buttons[0].focus();}
+ }
+});
+window.addEventListener("keydown",event=>{
+ if(projectLightbox||event.altKey||event.ctrlKey||event.metaKey)return;
+ const target=event.target.closest?.(".project-view .gallery-figure img[data-gallery-index]");
+ if(!target||(event.key!=="Enter"&&event.key!==" "))return;
+ event.preventDefault();
+ const route=getRoute();
+ const project=site?.projects.find(p=>p.id===route.project);
+ if(project)openProjectLightbox(project,Number(target.dataset.galleryIndex),target);
+});
+
 let lastHomeWheel=0;
 window.addEventListener("wheel",ev=>{
  if(!site||getRoute().page!=="home"||Math.abs(ev.deltaY)<14||ev.ctrlKey)return;

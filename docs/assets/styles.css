@@ -774,3 +774,96 @@
 @media (prefers-reduced-motion: reduce){
  .is-home .home-img-incoming{transition:none}
 }
+
+/* STEP 3 — fullscreen project lightbox. Existing pages remain unchanged. */
+.project-view .gallery-figure img[data-gallery-index]{
+  cursor:zoom-in;
+}
+.project-view .gallery-figure img[data-gallery-index]:focus-visible{
+  outline:2px solid var(--ink);
+  outline-offset:3px;
+}
+.sv-lightbox{
+  position:fixed;
+  inset:0;
+  width:100%;
+  height:100vh;
+  height:100dvh;
+  z-index:10000;
+  background:#000;
+  color:#fff;
+  overflow:hidden;
+  overscroll-behavior:contain;
+  isolation:isolate;
+}
+.sv-lightbox-stage{
+  position:absolute;
+  inset:clamp(16px,3vh,36px) clamp(62px,6vw,110px);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:zoom-out;
+}
+.sv-lightbox-image{
+  display:block;
+  width:auto;
+  height:auto;
+  max-width:100%;
+  max-height:100%;
+  object-fit:contain;
+  object-position:center;
+  cursor:default;
+  user-select:none;
+  -webkit-user-drag:none;
+}
+.sv-lightbox-close,.sv-lightbox-arrow{
+  position:absolute;
+  z-index:2;
+  display:grid;
+  place-items:center;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  color:#fff;
+  text-shadow:0 1px 7px rgba(0,0,0,.7);
+  cursor:pointer;
+  line-height:1;
+  font-family:Arial,Helvetica,sans-serif;
+  font-weight:200;
+}
+.sv-lightbox-close{
+  top:12px;
+  right:14px;
+  width:48px;
+  height:48px;
+  font-size:35px;
+}
+.sv-lightbox-arrow{
+  top:50%;
+  transform:translateY(-50%);
+  width:54px;
+  height:86px;
+  font-size:44px;
+}
+.sv-lightbox-prev{left:8px}
+.sv-lightbox-next{right:8px}
+.sv-lightbox-close:hover,.sv-lightbox-arrow:hover{color:#c8c8c8}
+.sv-lightbox-close:focus-visible,.sv-lightbox-arrow:focus-visible{
+  outline:2px solid #fff;
+  outline-offset:-6px;
+}
+.sv-lightbox-sr{
+  position:absolute;
+  width:1px;
+  height:1px;
+  overflow:hidden;
+  clip-path:inset(50%);
+  white-space:nowrap;
+}
+@media(max-width:750px){
+  .sv-lightbox-stage{inset:58px 12px 75px}
+  .sv-lightbox-close{top:8px;right:8px;width:48px;height:48px}
+  .sv-lightbox-arrow{top:auto;bottom:8px;transform:none;width:58px;height:54px}
+  .sv-lightbox-prev{left:12px}
+  .sv-lightbox-next{right:12px}
+}
