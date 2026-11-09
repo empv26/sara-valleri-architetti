@@ -70,13 +70,13 @@
       "city": "Milano",
       "kindIt": "Residenziale",
       "kindEn": "Residential",
-      "cover": "./assets/images/projects/g02/cover.jpg",
+      "cover": "./assets/images/projects/g02/cover.webp",
       "images": [
-        "./assets/images/projects/g02/cover.jpg",
-        "./assets/images/projects/g02/gallery-02.jpg",
-        "./assets/images/projects/g02/gallery-17.jpg",
-        "./assets/images/projects/g02/gallery-37.jpg",
-        "./assets/images/projects/g02/gallery-45.jpg"
+        "./assets/images/projects/g02/cover.webp",
+        "./assets/images/projects/g02/gallery-02.webp",
+        "./assets/images/projects/g02/gallery-17.webp",
+        "./assets/images/projects/g02/gallery-37.webp",
+        "./assets/images/projects/g02/gallery-45.webp"
       ],
       "descriptionIt": "A due passi dal verde di Parco Sempione e dalla monumentalità dell'Arena Civica, il progetto si inserisce in uno dei contesti residenziali più ricercati ed eleganti della città. L’intervento di interior design disegna un’oasi di quiete domestica e benessere, dove la luce naturale modella ambienti fluidi e rilassanti. Il living punta su un’eleganza sobria e minimale, scandita da toni neutri, arredi dalle linee morbide e dettagli accoglienti. Nella camera padronale, una carta da parati a motivi arcuati scalda la parete di fondo creando un'atmosfera intima e raccolta. Il bagno principale è concepito come una vera e propria spa privata, impreziosito dal marmo brecciato a tutta altezza e dalla presenza di una sauna su misura in legno naturale. Un rifugio urbano essenziale e materico, pensato per staccare dal ritmo dinamico della metropoli.",
       "descriptionEn": "A serene residence near Parco Sempione, where soft forms, neutral colours and natural light create a retreat from the city. A bespoke sauna and richly veined marble lend the master bathroom a spa-like atmosphere."
