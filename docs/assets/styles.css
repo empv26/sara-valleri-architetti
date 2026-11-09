@@ -709,3 +709,31 @@
   }
   .contact-page.contact-editorial{--contact-type-size:clamp(11px,2.8vw,13px)}
 }
+
+/* Project gallery — desktop: show each whole image within one viewport.
+   Mobile gallery presentation remains unchanged below 751px. */
+@media(min-width:751px){
+  .project-view .gallery{
+    padding-bottom:0;
+  }
+  .project-view .gallery-figure{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:100%;
+    height:100vh;
+    height:100dvh;
+    min-height:0;
+    margin:0;
+    overflow:hidden;
+  }
+  .project-view .gallery-figure img{
+    display:block;
+    width:100%;
+    height:100%;
+    max-width:100%;
+    max-height:100%;
+    object-fit:contain;
+    object-position:center center;
+  }
+}
