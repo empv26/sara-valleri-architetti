@@ -1,0 +1,81 @@
+name: Step 2 - Convert M64 gallery to WebP
+
+on:
+  push:
+    branches:
+      - feat/portfolio-preview-v02
+    paths:
+      - .github/workflows/step-02-m64-webp.yml
+
+permissions:
+  contents: write
+
+jobs:
+  m64-to-webp:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/portfolio-preview-v02
+
+      - name: Convert five current M64 photographs and verify dimensions
+        run: |
+          python -m pip install --disable-pip-version-check Pillow==11.3.0
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from PIL import Image, ImageOps, features
+
+          assert features.check('webp'), 'WebP encoding is unavailable'
+          directory = Path('docs/assets/images/projects/m64')
+          config_path = Path('docs/config/site.json')
+          original_config = config_path.read_text(encoding='utf-8')
+          before = json.loads(original_config)
+          names = ['cover', 'gallery-03', 'gallery-10', 'gallery-38', 'gallery-62']
+          project = next(p for p in before['projects'] if p['id'] == 'm64')
+          assert len(project['images']) == len(names)
+          assert project['cover'] == './assets/images/projects/m64/cover.jpg'
+
+          config = original_config
+          for name in names:
+              source = directory / f'{name}.jpg'
+              target = directory / f'{name}.webp'
+              assert source.is_file(), f'Missing photo: {source}'
+              assert not target.exists(), f'Already exists: {target}'
+              with Image.open(source) as original:
+                  image = ImageOps.exif_transpose(original)
+                  dimensions = image.size
+                  args = dict(format='WEBP', quality=86, method=6)
+                  if original.info.get('icc_profile'):
+                      args['icc_profile'] = original.info['icc_profile']
+                  image.convert('RGB').save(target, **args)
+              with Image.open(target) as result:
+                  result.load()
+                  assert result.format == 'WEBP'
+                  assert result.size == dimensions
+              assert target.stat().st_size < source.stat().st_size, f'WebP not smaller: {name}'
+              old = f'./assets/images/projects/m64/{name}.jpg'
+              new = f'./assets/images/projects/m64/{name}.webp'
+              expected = 2 if name == 'cover' else 1
+              assert config.count(old) == expected, f'Unexpected references for {old}: {config.count(old)}'
+              config = config.replace(old, new)
+              print(f'{source.name}: {source.stat().st_size:,} => {target.name}: {target.stat().st_size:,} bytes')
+
+          after = json.loads(config)
+          assert after['homeImages'] == before['homeImages'], 'Home changed unexpectedly'
+          assert after['projects'][1:] == before['projects'][1:], 'Other projects changed'
+          m64 = next(p for p in after['projects'] if p['id'] == 'm64')
+          assert m64['cover'].endswith('cover.webp')
+          assert len(m64['images']) == 5
+          assert all(image.endswith('.webp') for image in m64['images'])
+          config_path.write_text(config, encoding='utf-8')
+          PY
+
+      - name: Commit only the M64 WebP files and config
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/assets/images/projects/m64/*.webp docs/config/site.json
+          git diff --cached --quiet && exit 0
+          git commit -m "perf(m64): serve five project photographs as verified WebP"
+          git push origin HEAD:feat/portfolio-preview-v02
