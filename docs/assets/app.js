@@ -49,11 +49,43 @@ const firstProjectImageDimensions={
  r14:[2000,3000],
  g01:[3000,2000],
  g02:[2999,2000],
- a28:[5712,4284]
+ a28:[4284,5712]
 };
 function imageDimensions(size){
  return size?' width="'+size[0]+'" height="'+size[1]+'"':'';
 }
+
+/* G01/G02 only: reserve exact geometry and request distant photos as they approach
+   the viewport. Fullscreen always uses original URLs; no asset recompression. */
+const progressiveProjectDimensions={
+ g01:[[3000,2000],[2000,2999],[2000,3000],[2000,3000],[2000,2999],[2000,3000],[2999,2000],[2000,2999],[2000,2999],[2000,2999],[2999,2000],[2000,2999],[2000,2999],[3000,2000],[2000,2999],[2000,2999],[2999,2000],[2000,2999]],
+ g02:[[2999,2000],[2000,2998],[2000,2999],[2000,2999],[2000,2999],[2001,3000],[2000,2999],[2000,2999],[2000,3000],[2000,2999],[2001,3000],[2000,2999],[2000,2999],[2000,3000],[2000,2999],[2000,2998]]
+};
+let projectGalleryObserver=null;
+function activateProgressiveProjectGallery(){
+ if(projectGalleryObserver){projectGalleryObserver.disconnect();projectGalleryObserver=null;}
+ const deferred=Array.from(root.querySelectorAll(".project-view img[data-progressive-src]"));
+ if(!deferred.length)return;
+ const load=img=>{
+  const src=img.dataset.progressiveSrc;
+  if(!src)return;
+  delete img.dataset.progressiveSrc;
+  img.addEventListener("load",()=>{img.style.visibility="";},{once:true});
+  img.src=src;
+  if(img.complete&&img.naturalWidth)img.style.visibility="";
+ };
+ if(typeof IntersectionObserver!=="function"){deferred.forEach(load);return;}
+ const observer=new IntersectionObserver(entries=>{
+  for(const entry of entries){
+   if(!entry.isIntersecting)continue;
+   observer.unobserve(entry.target);
+   load(entry.target);
+  }
+ },{rootMargin:"1000px 0px",threshold:0});
+ projectGalleryObserver=observer;
+ deferred.forEach(img=>observer.observe(img));
+}
+
 function warmPageImage(src){
  if(!src||warmImageCache.has(src))return;
  const img=new Image();
@@ -168,7 +200,21 @@ function advanceHomeSlide(){
 }
 function cover(p,index){const first=index<2;return '<span class="cover-frame"><img src="'+esc(p.cover)+'" alt="'+esc(p.title)+' — '+t("copertina progetto","project cover")+'" loading="'+(first?"eager":"lazy")+'" decoding="async"'+(first?' fetchpriority="high"':'')+' onerror=\''+imageError+'\'></span>';}
 function overview(){return '<section class="overview"><div class="topline"><h1 class="section-heading">'+t("PROGETTI","PROJECTS")+'</h1><span class="eyebrow">01 — 05</span></div><div class="project-grid">'+site.projects.map((p,index)=>'<a class="project-card" data-link href="'+url("projects",p.id)+'" aria-label="'+t("Apri il progetto","Open project")+' '+esc(p.title)+'">'+cover(p,index)+'<div class="project-meta"><strong>'+esc(p.title)+'</strong><small>'+esc(p.city)+' / '+esc(p.year)+'</small></div></a>').join("")+'</div><div class="more">'+t("Architettura, interni, residenziale.","Architecture, interiors, residential.")+'</div></section>';}
-function detail(p){const next=site.projects[(site.projects.indexOf(p)+1)%site.projects.length];const imgs=p.images&&p.images.length?p.images:[p.cover];return '<article class="project-view"><div class="gallery">'+imgs.map((s,i)=>'<figure class="gallery-figure"><img data-gallery-index="'+i+'" role="button" tabindex="0" aria-label="'+t("Apri foto a schermo intero","Open photo fullscreen")+' '+(i+1)+' — '+esc(p.title)+'" src="'+esc(s)+'" alt="'+esc(p.title)+' — '+t("fotografia","photograph")+' '+(i+1)+'" '+(i?'loading="lazy" decoding="async"':'loading="eager" decoding="async" fetchpriority="high"'+imageDimensions(firstProjectImageDimensions[p.id]))+' onerror=\''+imageError+'\'></figure>').join("")+'</div><aside class="project-info"><a class="back" data-link href="'+url("projects")+'">← '+t("Tutti i progetti","All projects")+'</a><h1>'+esc(p.title)+'</h1><div class="info-meta">'+esc(p.city)+' · '+esc(p.year)+'<br>'+esc(t(p.kindIt,p.kindEn))+'<br>'+t("Committente privato","Private client")+'</div><div class="info-desc">'+esc(t(p.descriptionIt,p.descriptionEn))+'</div><div class="info-footer">'+t("Fotografie","Photography")+': Elena Pegurri<br><a class="next-link" data-link href="'+url("projects",next.id)+'">'+t("Progetto successivo","Next project")+' → '+esc(next.title)+'</a></div></aside></article>';}
+function detail(p){
+ const next=site.projects[(site.projects.indexOf(p)+1)%site.projects.length];
+ const imgs=p.images&&p.images.length?p.images:[p.cover];
+ const dims=progressiveProjectDimensions[p.id];
+ if(dims&&dims.length!==imgs.length)throw new Error("Project photo dimensions mismatch: "+p.id);
+ const figures=imgs.map((s,i)=>{
+  if(!dims){
+   return '<figure class="gallery-figure"><img data-gallery-index="'+i+'" role="button" tabindex="0" aria-label="'+t("Apri foto a schermo intero","Open photo fullscreen")+' '+(i+1)+' — '+esc(p.title)+'" src="'+esc(s)+'" alt="'+esc(p.title)+' — '+t("fotografia","photograph")+' '+(i+1)+'" '+(i?'loading="lazy" decoding="async"':'loading="eager" decoding="async" fetchpriority="high"'+imageDimensions(firstProjectImageDimensions[p.id]))+' onerror=\''+imageError+'\'></figure>';
+  }
+  const deferred=i>1;
+  const photoSource=deferred?' data-progressive-src="'+esc(s)+'" class="gallery-deferred" style="visibility:hidden" loading="eager" decoding="async"':' src="'+esc(s)+'" loading="eager" decoding="async"'+(i===0?' fetchpriority="high"':'');
+  return '<figure class="gallery-figure"><img data-gallery-index="'+i+'" role="button" tabindex="0" aria-label="'+t("Apri foto a schermo intero","Open photo fullscreen")+' '+(i+1)+' — '+esc(p.title)+'"'+photoSource+' alt="'+esc(p.title)+' — '+t("fotografia","photograph")+' '+(i+1)+'"'+imageDimensions(dims[i])+' onerror=\''+imageError+'\'></figure>';
+ }).join("");
+ return '<article class="project-view"><div class="gallery">'+figures+'</div><aside class="project-info"><a class="back" data-link href="'+url("projects")+'">← '+t("Tutti i progetti","All projects")+'</a><h1>'+esc(p.title)+'</h1><div class="info-meta">'+esc(p.city)+' · '+esc(p.year)+'<br>'+esc(t(p.kindIt,p.kindEn))+'<br>'+t("Committente privato","Private client")+'</div><div class="info-desc">'+esc(t(p.descriptionIt,p.descriptionEn))+'</div><div class="info-footer">'+t("Fotografie","Photography")+': Elena Pegurri<br><a class="next-link" data-link href="'+url("projects",next.id)+'">'+t("Progetto successivo","Next project")+' → '+esc(next.title)+'</a></div></aside></article>';
+}
 function about(){
  const bio1=t("Sono un’architetta freelance con sede a Milano, laureata in Architettura al Politecnico di Milano. Mi occupo di progettazione architettonica e interior design, con particolare attenzione agli spazi residenziali.","I am a freelance architect based in Milan. I graduated in Architecture from Politecnico di Milano and work in architectural design and interior design, with a particular focus on residential spaces.");
  const bio2=t("Nel mio lavoro cerco un equilibrio tra sensibilità estetica, funzionalità e cura del dettaglio, dando forma ad ambienti essenziali, armoniosi e pensati su misura. Il mio percorso professionale è legato anche a SV Architetti, a Milano.","In my work, I seek a balance between aesthetic sensitivity, functionality and attention to detail, creating essential, harmonious spaces tailored to each project. My professional path is also connected with SV Architetti in Milan.");
@@ -270,7 +316,7 @@ function moveProjectLightbox(delta){
  ready.src=source;
 }
 
-function render(scroll=true){if(!site)return;closeProjectLightbox();homeViewId++;homeSwitching=false;homeWanted=null;document.body.classList.toggle("is-home",getRoute().page==="home");document.documentElement.lang=lang;const r=getRoute(),p=site.projects.find(v=>v.id===r.project);let body=r.page==="home"?home(r.preview):r.page==="about"?about():r.page==="contact"?contact():p?detail(p):overview();root.innerHTML=rail(r.page)+'<main class="site-main" id="main">'+body+'</main>';document.title=(p?p.title+" — ":r.page!=="home"?r.page.charAt(0).toUpperCase()+r.page.slice(1)+" — ":"")+"Sara Valleri Architetti";if(r.page==="home"){const frame=document.querySelector(".home-page");homeWanted=Number(frame?.dataset.homeIndex||0);preloadAllHomePhotos();}if(scroll)window.scrollTo({top:0,behavior:"instant"});}
+function render(scroll=true){if(!site)return;closeProjectLightbox();homeViewId++;homeSwitching=false;homeWanted=null;document.body.classList.toggle("is-home",getRoute().page==="home");document.documentElement.lang=lang;const r=getRoute(),p=site.projects.find(v=>v.id===r.project);let body=r.page==="home"?home(r.preview):r.page==="about"?about():r.page==="contact"?contact():p?detail(p):overview();root.innerHTML=rail(r.page)+'<main class="site-main" id="main">'+body+'</main>';activateProgressiveProjectGallery();document.title=(p?p.title+" — ":r.page!=="home"?r.page.charAt(0).toUpperCase()+r.page.slice(1)+" — ":"")+"Sara Valleri Architetti";if(r.page==="home"){const frame=document.querySelector(".home-page");homeWanted=Number(frame?.dataset.homeIndex||0);preloadAllHomePhotos();}if(scroll)window.scrollTo({top:0,behavior:"instant"});}
 document.addEventListener("pointerover",ev=>warmDestination(ev.target));
 document.addEventListener("focusin",ev=>warmDestination(ev.target));
 document.addEventListener("pointerdown",ev=>warmDestination(ev.target));
