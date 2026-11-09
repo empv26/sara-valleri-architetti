@@ -49,8 +49,8 @@ jobs:
           original_bytes = len(original_data)
           with Image.open(io.BytesIO(original_data)) as source:
               source.load()
-              assert source.format in ('JPEG', 'PNG', 'WEBP', 'TIFF'), f'Unsupported image source format: {source.format}'
-              print(f'A28 original image format: {source.format}')
+              assert source.format in ('JPEG', 'PNG', 'WEBP', 'TIFF', 'MPO'), f'Unsupported image source format: {source.format}'
+              print(f'A28 original image format: {source.format}; frames: {getattr(source, "n_frames", 1)}; rendering first frame as browser does')
               photograph = ImageOps.exif_transpose(source)
               dimensions = photograph.size
               params = {'format': 'WEBP', 'quality': 86, 'method': 6}
