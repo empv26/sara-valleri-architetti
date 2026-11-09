@@ -55,7 +55,7 @@ jobs:
               config = config.replace(old_ref, new_ref)
               print(f'{original.name} {original.stat().st_size:,} -> {converted.name} {converted.stat().st_size:,} bytes')
 
-          assert len(re.findall(r'assets/images/home/\\d{2}\\.webp', config)) == 4
+          assert all(f'./assets/images/home/{index:02d}.webp' in config for index in range(1, 5))
           config_path.write_text(config, encoding='utf-8')
           PY
 
