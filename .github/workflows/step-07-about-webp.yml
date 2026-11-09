@@ -1,0 +1,66 @@
+name: Step 7 - Convert About portrait to WebP
+
+on:
+  push:
+    branches:
+      - feat/portfolio-preview-v02
+    paths:
+      - .github/workflows/step-07-about-webp.yml
+
+permissions:
+  contents: write
+
+jobs:
+  about-to-webp:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/portfolio-preview-v02
+
+      - name: Convert About portrait and verify rendered reference
+        run: |
+          python -m pip install --disable-pip-version-check Pillow==11.3.0
+          python - <<'PY'
+          from pathlib import Path
+          from PIL import Image, ImageOps, features
+
+          assert features.check('webp'), 'Pillow WebP support unavailable'
+          source = Path('docs/assets/images/about/portrait.jpg')
+          dest = Path('docs/assets/images/about/portrait.webp')
+          app_path = Path('docs/assets/app.js')
+          assert source.is_file(), f'Missing original About portrait: {source}'
+          assert not dest.exists(), f'About WebP already exists: {dest}'
+          with Image.open(source) as original:
+              photo = ImageOps.exif_transpose(original)
+              dimensions = photo.size
+              kwargs = {'format': 'WEBP', 'quality': 86, 'method': 6}
+              if original.info.get('icc_profile'):
+                  kwargs['icc_profile'] = original.info['icc_profile']
+              mode = 'RGBA' if 'A' in photo.getbands() or (photo.mode == 'P' and 'transparency' in photo.info) else 'RGB'
+              photo.convert(mode).save(dest, **kwargs)
+          with Image.open(dest) as verify:
+              verify.load()
+              assert verify.format == 'WEBP', 'Converted photo is not WebP'
+              assert verify.size == dimensions, 'Converted photo changed pixel dimensions'
+          assert dest.stat().st_size < source.stat().st_size, 'WebP size not smaller than original'
+
+          js = app_path.read_text(encoding='utf-8')
+          original_url = './assets/images/about/portrait.jpg'
+          converted_url = './assets/images/about/portrait.webp'
+          assert js.count(original_url) == 1, 'Expected exactly one About portrait reference'
+          assert js.count(converted_url) == 0, 'Unexpected pre-existing WebP reference'
+          new_js = js.replace(original_url, converted_url)
+          assert new_js.replace(converted_url, original_url) == js, 'Unexpected JavaScript changes'
+          app_path.write_text(new_js, encoding='utf-8')
+          print(f'ABOUT JPEG {source.stat().st_size:,} bytes -> WebP {dest.stat().st_size:,} bytes')
+          print(f'Pixels: {dimensions[0]} x {dimensions[1]}')
+
+      - name: Commit only About portrait and its one reference
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/assets/images/about/portrait.webp docs/assets/app.js
+          git diff --cached --quiet && exit 0
+          git commit -m "perf(about): use optimized WebP portrait"
+          git push origin HEAD:feat/portfolio-preview-v02
