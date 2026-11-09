@@ -34,13 +34,13 @@
       "city": "Milano",
       "kindIt": "Residenziale",
       "kindEn": "Residential",
-      "cover": "./assets/images/projects/r14/cover.jpg",
+      "cover": "./assets/images/projects/r14/cover.webp",
       "images": [
-        "./assets/images/projects/r14/cover.jpg",
-        "./assets/images/projects/r14/gallery-02.jpg",
-        "./assets/images/projects/r14/gallery-12.jpg",
-        "./assets/images/projects/r14/gallery-31.jpg",
-        "./assets/images/projects/r14/gallery-48.jpg"
+        "./assets/images/projects/r14/cover.webp",
+        "./assets/images/projects/r14/gallery-02.webp",
+        "./assets/images/projects/r14/gallery-12.webp",
+        "./assets/images/projects/r14/gallery-31.webp",
+        "./assets/images/projects/r14/gallery-48.webp"
       ],
       "descriptionIt": "Nel cuore storico di Milano, tra il Castello Sforzesco e il Teatro Dal Verme, Via Rovello custodisce una dimensione residenziale riservata e autentica.\n Inserito in un edificio contemporaneo firmato da Arassociati, caratterizzato da logge verdi e una scansione di facciata rigorosa, l’intervento d’interni definisce uno spazio intimo ed essenziale. La zona giorno accoglie la luce naturale attraverso ampie vetrate schermate da tendaggi morbidi, dove toni caldi, superfici tessili a parete e dettagli in ottone dialogano con pezzi iconici del design italiano. \nLa zona notte prosegue la medesima ricerca di comfort e misura, tra boiserie imbottite, arredi su misura e scorci riflessi che amplificano lo spazio. Un progetto di residenza contemporanea che sintetizza il dinamismo del centro milanese in un rifugio silenzioso e sofisticato.",
       "descriptionEn": "In Milan's historic centre, a private residence combines natural light, warm materials and tailored furnishings. The interior is calm and intimate, with a contemporary elegance that contrasts with the energy of the city outside."
