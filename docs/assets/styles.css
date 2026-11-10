@@ -917,3 +917,19 @@
     align-self:center;
   }
 }
+
+/* DESKTOP ABOUT/CONTACT — full portrait visible without scrolling.
+   Reserve vertical room for page padding, photo caption and comfortable margin.
+   Keep the original image proportions; never alter mobile layout. */
+@media(min-width:751px){
+  .about-page .about-image,
+  .contact-editorial .contact-image{
+    width:auto;
+    height:auto;
+    max-width:100%;
+    max-height:calc(100vh - clamp(30px,5.2vw,80px) - 76px - 40px);
+    max-height:calc(100dvh - clamp(30px,5.2vw,80px) - 76px - 40px);
+    object-fit:contain;
+    object-position:left top;
+  }
+}
