@@ -903,14 +903,17 @@
  .contact-page.contact-editorial{--contact-type-size:14px}
 }
 
-/* Desktop: Sara Valleri wordmark centered horizontally within the left rail. */
-@media (min-width:751px){
+/* Mobile-only centered logo: full-width grid alignment keeps IT/EN at right.
+   On Home the same logo centers in the overlay navigation's flex layout. */
+@media(max-width:750px){
   .site-rail > .brand{
-    align-self:center;
+    grid-column:1 / -1;
+    grid-row:1;
+    justify-self:center;
     margin-left:auto;
     margin-right:auto;
   }
-  .site-rail .brand img{
-    object-position:center;
+  .is-home .site-rail > .brand{
+    align-self:center;
   }
 }
