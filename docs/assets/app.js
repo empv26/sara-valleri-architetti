@@ -13,6 +13,7 @@ const homePhotoCache=new Map();
 let homeViewId=0;
 let homeSwitching=false;
 let homeWanted=null;
+let routeRequestId=0;
 function preloadHomePhoto(src){
  if(homePhotoCache.has(src))return homePhotoCache.get(src);
  const img=new Image();
@@ -35,6 +36,12 @@ function preloadAllHomePhotos(){
 }
 function homeStepBase(){
  return Number.isInteger(homeWanted)?homeWanted:Number(sessionStorage.getItem("sv-home-slide")||0);
+}
+function selectedHomePhoto(){
+ const images=site?.homeImages||[];
+ if(!images.length)return "";
+ const index=Number(sessionStorage.getItem("sv-home-slide")||0);
+ return images[Number.isInteger(index)&&index>=0&&index<images.length?index:0];
 }
 
 
@@ -96,12 +103,17 @@ function warmPageImage(src){
  img.src=src;
 }
 function warmDestination(target){
- const link=target&&target.closest?target.closest("a[data-link]"):null;
+ const link=target&&target.closest?target.closest("a[data-link],a.brand"):null;
  if(!site||!link)return;
  const href=link.getAttribute("href")||"";
  if(!href.startsWith("?"))return;
  const params=new URLSearchParams(href.slice(1));
  const page=params.get("page");
+ if(page==="home"){
+  const src=selectedHomePhoto();
+  if(src)preloadHomePhoto(src).catch(()=>{});
+  return;
+ }
  if(primaryPageImages[page]){
   warmPageImage(primaryPageImages[page]);
   return;
@@ -151,7 +163,7 @@ function advanceHomeSlide(){
  homeSwitching=true;
  const viewId=homeViewId;
  const src=site.homeImages[next];
- preloadHomePhoto(src).then(()=>{
+ preloadHomePhoto(src).then(incoming=>{
   if(viewId!==homeViewId||!frame.isConnected||getRoute().page!=="home")return;
   if(homeWanted!==next){
    homeSwitching=false;
@@ -160,9 +172,7 @@ function advanceHomeSlide(){
   }
   const outgoing=frame.querySelector(".home-img.is-current");
   if(!outgoing){homeSwitching=false;return;}
-  const incoming=document.createElement("img");
   incoming.className="home-img home-img-incoming";
-  incoming.src=src;
   incoming.alt=t("Architettura e interni — fotografia","Architecture and interiors — photograph")+" "+(next+1);
   frame.insertBefore(incoming,frame.querySelector(".home-carousel"));
   let completed=false;
@@ -316,7 +326,50 @@ function moveProjectLightbox(delta){
  ready.src=source;
 }
 
-function render(scroll=true){if(!site)return;closeProjectLightbox();homeViewId++;homeSwitching=false;homeWanted=null;document.body.classList.toggle("is-home",getRoute().page==="home");document.documentElement.lang=lang;const r=getRoute(),p=site.projects.find(v=>v.id===r.project);let body=r.page==="home"?home(r.preview):r.page==="about"?about():r.page==="contact"?contact():p?detail(p):overview();root.innerHTML=rail(r.page)+'<main class="site-main" id="main">'+body+'</main>';activateProgressiveProjectGallery();document.title=(p?p.title+" — ":r.page!=="home"?r.page.charAt(0).toUpperCase()+r.page.slice(1)+" — ":"")+"Sara Valleri Architetti";if(r.page==="home"){const frame=document.querySelector(".home-page");homeWanted=Number(frame?.dataset.homeIndex||0);preloadAllHomePhotos();}if(scroll)window.scrollTo({top:0,behavior:"instant"});}
+function render(scroll=true,decodedHomeImage=null){
+ if(!site)return;
+ closeProjectLightbox();
+ homeViewId++;
+ homeSwitching=false;
+ homeWanted=null;
+ const r=getRoute();
+ document.body.classList.toggle("is-home",r.page==="home");
+ document.documentElement.lang=lang;
+ const p=site.projects.find(v=>v.id===r.project);
+ const body=r.page==="home"?home(r.preview):r.page==="about"?about():r.page==="contact"?contact():p?detail(p):overview();
+ root.innerHTML=rail(r.page)+'<main class="site-main" id="main">'+body+'</main>';
+ if(r.page==="home"){
+  const placeholder=root.querySelector(".home-page .home-img.is-current");
+  if(decodedHomeImage&&placeholder){
+   // Transfer the already decoded image node into the new view before the browser paints.
+   decodedHomeImage.className=placeholder.className;
+   decodedHomeImage.alt=placeholder.alt;
+   decodedHomeImage.setAttribute("fetchpriority","high");
+   placeholder.replaceWith(decodedHomeImage);
+  }
+ }
+ activateProgressiveProjectGallery();
+ document.title=(p?p.title+" — ":r.page!=="home"?r.page.charAt(0).toUpperCase()+r.page.slice(1)+" — ":"")+"Sara Valleri Architetti";
+ if(r.page==="home"){
+  const frame=root.querySelector(".home-page");
+  homeWanted=Number(frame?.dataset.homeIndex||0);
+  preloadAllHomePhotos();
+ }
+ if(scroll)window.scrollTo({top:0,behavior:"instant"});
+}
+function showRoute(scroll=true){
+ if(!site)return;
+ const requestId=++routeRequestId;
+ if(getRoute().page!=="home"){render(scroll);return;}
+ const src=selectedHomePhoto();
+ if(!src){render(scroll);return;}
+ // Keep the previous view visible until the Home image is fully decoded.
+ preloadHomePhoto(src).then(image=>{
+  if(requestId===routeRequestId&&getRoute().page==="home")render(scroll,image);
+ }).catch(()=>{
+  if(requestId===routeRequestId&&getRoute().page==="home")render(scroll);
+ });
+}
 document.addEventListener("pointerover",ev=>warmDestination(ev.target));
 document.addEventListener("focusin",ev=>warmDestination(ev.target));
 document.addEventListener("pointerdown",ev=>warmDestination(ev.target));
@@ -335,7 +388,7 @@ document.addEventListener("click",ev=>{
   if(project)openProjectLightbox(project,Number(target.dataset.galleryIndex),target);
   return;
  }
- const language=ev.target.closest("[data-lang]");if(language){lang=language.getAttribute("data-lang");localStorage.setItem("sv-lang",lang);render(false);return;}const pic=ev.target.closest("[data-hero]");if(pic){goHomeSlide(Number(pic.getAttribute("data-hero")));return;}const step=ev.target.closest("[data-home-step]");if(step){goHomeSlide(homeStepBase()+Number(step.getAttribute("data-home-step")));return;}const a=ev.target.closest("a[data-link],a.brand");if(a&&a.origin===location.origin){ev.preventDefault();history.pushState(null,"",a.getAttribute("href"));render();}});
+ const language=ev.target.closest("[data-lang]");if(language){lang=language.getAttribute("data-lang");localStorage.setItem("sv-lang",lang);showRoute(false);return;}const pic=ev.target.closest("[data-hero]");if(pic){goHomeSlide(Number(pic.getAttribute("data-hero")));return;}const step=ev.target.closest("[data-home-step]");if(step){goHomeSlide(homeStepBase()+Number(step.getAttribute("data-home-step")));return;}const a=ev.target.closest("a[data-link],a.brand");if(a&&a.origin===location.origin){ev.preventDefault();history.pushState(null,"",a.getAttribute("href"));showRoute();}});
 
 /* Fullscreen gallery keyboard support and focus containment. */
 window.addEventListener("keydown",event=>{
@@ -390,6 +443,6 @@ window.addEventListener("touchend",ev=>{
  const delta=Math.abs(dx)>Math.abs(dy)?(dx<0?1:-1):(dy<0?1:-1);
  goHomeSlide(homeStepBase()+delta);
 },{passive:true});
-window.addEventListener("popstate",()=>render());
-fetch("./config/site.json",{cache:"no-store"}).then(r=>{if(!r.ok)throw new Error("Missing site data");return r.json();}).then(x=>{site=x;render();}).catch(()=>{root.innerHTML='<p class="loading">Impossibile caricare la configurazione del sito. / Site configuration unavailable.</p>';});
+window.addEventListener("popstate",()=>showRoute());
+fetch("./config/site.json",{cache:"no-store"}).then(r=>{if(!r.ok)throw new Error("Missing site data");return r.json();}).then(x=>{site=x;showRoute();}).catch(()=>{root.innerHTML='<p class="loading">Impossibile caricare la configurazione del sito. / Site configuration unavailable.</p>';});
 })();

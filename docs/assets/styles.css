@@ -867,3 +867,38 @@
   .sv-lightbox-prev{left:12px}
   .sv-lightbox-next{right:12px}
 }
+
+/* MOBILE EDITORIAL: About and Contact text precedes the full-width portrait.
+   Desktop's approved side-by-side composition stays unchanged. */
+@media(max-width:750px){
+ .about-page .about-layout,
+ .contact-editorial .contact-layout{
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+  gap:30px;
+ }
+ .about-page .about-copy,
+ .contact-editorial .contact-copy{
+  order:0;
+  width:100%;
+  max-width:none;
+  position:static;
+  top:auto;
+ }
+ .about-page .about-visual,
+ .contact-editorial .contact-visual{
+  order:1;
+  width:100%;
+  min-width:0;
+ }
+ .about-page .about-copy{
+  font-size:14px;
+  line-height:1.7;
+ }
+ .about-page .about-copy > h1.section-heading,
+ .contact-editorial .contact-copy > h1.section-heading{margin-bottom:22px}
+ .about-page .about-image,
+ .contact-editorial .contact-image{width:100%;height:auto}
+ .contact-page.contact-editorial{--contact-type-size:14px}
+}
