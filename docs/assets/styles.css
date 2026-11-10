@@ -902,3 +902,15 @@
  .contact-editorial .contact-image{width:100%;height:auto}
  .contact-page.contact-editorial{--contact-type-size:14px}
 }
+
+/* Desktop: Sara Valleri wordmark centered horizontally within the left rail. */
+@media (min-width:751px){
+  .site-rail > .brand{
+    align-self:center;
+    margin-left:auto;
+    margin-right:auto;
+  }
+  .site-rail .brand img{
+    object-position:center;
+  }
+}
