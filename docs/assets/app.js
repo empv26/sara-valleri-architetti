@@ -145,7 +145,7 @@ function home(){
  +'<div class="home-pager">'+images.map((v,k)=>'<button type="button" class="home-dot'+(k===i?' is-active':'')+'" data-hero="'+k+'" aria-label="'+t("Vai alla foto ","Go to photo ")+(k+1)+'" aria-pressed="'+(k===i)+'"></button>').join("")+'</div>'
  +'<button type="button" class="home-arrow" data-home-step="-1" aria-label="'+t("Foto precedente","Previous photo")+'">←</button>'
  +'<button type="button" class="home-arrow" data-home-step="1" aria-label="'+t("Foto successiva","Next photo")+'">→</button>'
- +'</div></section>';
+ +'</div><footer class="home-vat">P. IVA 04362550164</footer></section>';
 }
 function goHomeSlide(index){
  if(!site||getRoute().page!=="home"||!Number.isFinite(index))return;

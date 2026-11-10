@@ -933,3 +933,27 @@
     object-position:left top;
   }
 }
+
+/* HOME VAT — centered in the visual footer, clear of slide controls.
+   Contrast is preserved over photography; no effect on other pages. */
+.is-home .home-vat{
+  position:absolute;
+  left:50%;
+  bottom:max(12px,env(safe-area-inset-bottom));
+  transform:translateX(-50%);
+  z-index:6;
+  margin:0;
+  color:#fff;
+  font-family:var(--sans);
+  font-size:10px;
+  font-weight:400;
+  line-height:1.4;
+  letter-spacing:.03em;
+  text-shadow:0 1px 8px rgba(0,0,0,.85);
+  white-space:nowrap;
+  pointer-events:none;
+}
+@media(max-width:750px){
+  .is-home .home-vat{bottom:max(9px,env(safe-area-inset-bottom))}
+  .is-home .home-pager{bottom:max(39px,calc(env(safe-area-inset-bottom) + 31px))}
+}
