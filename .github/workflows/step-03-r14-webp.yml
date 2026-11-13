@@ -1,0 +1,84 @@
+name: Step 3 - Convert R14 gallery to WebP
+
+on:
+  push:
+    branches:
+      - feat/portfolio-preview-v02
+    paths:
+      - .github/workflows/step-03-r14-webp.yml
+
+permissions:
+  contents: write
+
+jobs:
+  r14-to-webp:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/portfolio-preview-v02
+
+      - name: Convert five R14 photographs and verify output
+        run: |
+          python -m pip install --disable-pip-version-check Pillow==11.3.0
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from PIL import Image, ImageOps, features
+
+          assert features.check('webp'), 'WebP encoding is unavailable'
+          folder = Path('docs/assets/images/projects/r14')
+          config_file = Path('docs/config/site.json')
+          source_json = config_file.read_text(encoding='utf-8')
+          original = json.loads(source_json)
+          project = next(p for p in original['projects'] if p['id'] == 'r14')
+          names = ['cover', 'gallery-02', 'gallery-12', 'gallery-31', 'gallery-48']
+          expected = [f'./assets/images/projects/r14/{name}.jpg' for name in names]
+          assert project['cover'] == expected[0], 'Unexpected R14 cover'
+          assert project['images'] == expected, 'Unexpected R14 gallery order'
+          updated_json = source_json
+
+          for name in names:
+              jpg = folder / f'{name}.jpg'
+              webp = folder / f'{name}.webp'
+              assert jpg.is_file(), f'Missing original image: {jpg}'
+              assert not webp.exists(), f'WebP already present: {webp}'
+              with Image.open(jpg) as source:
+                  photograph = ImageOps.exif_transpose(source)
+                  dimensions = photograph.size
+                  profile = source.info.get('icc_profile')
+                  params = {'format': 'WEBP', 'quality': 86, 'method': 6}
+                  if profile:
+                      params['icc_profile'] = profile
+                  photograph.convert('RGB').save(webp, **params)
+              with Image.open(webp) as verify:
+                  verify.load()
+                  assert verify.format == 'WEBP'
+                  assert verify.size == dimensions
+              assert webp.stat().st_size < jpg.stat().st_size, f'No size improvement: {name}'
+              old_ref = f'./assets/images/projects/r14/{name}.jpg'
+              new_ref = f'./assets/images/projects/r14/{name}.webp'
+              occurrences = 2 if name == 'cover' else 1
+              assert updated_json.count(old_ref) == occurrences, f'Unexpected references for {old_ref}'
+              updated_json = updated_json.replace(old_ref, new_ref)
+              print(f'{jpg.name}: {jpg.stat().st_size:,} -> {webp.name}: {webp.stat().st_size:,} bytes')
+
+          updated = json.loads(updated_json)
+          assert updated['homeImages'] == original['homeImages'], 'Unexpected Home change'
+          before_others = {p['id']: p for p in original['projects'] if p['id'] != 'r14'}
+          after_others = {p['id']: p for p in updated['projects'] if p['id'] != 'r14'}
+          assert before_others == after_others, 'Unexpected other project changes'
+          new_r14 = next(p for p in updated['projects'] if p['id'] == 'r14')
+          assert new_r14['cover'].endswith('cover.webp')
+          assert new_r14['images'] == [f'./assets/images/projects/r14/{name}.webp' for name in names]
+          config_file.write_text(updated_json, encoding='utf-8')
+          PY
+
+      - name: Commit only R14 WebP files and site references
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/assets/images/projects/r14/*.webp docs/config/site.json
+          git diff --cached --quiet && exit 0
+          git commit -m "perf(r14): use five verified WebP photographs"
+          git push origin HEAD:feat/portfolio-preview-v02

@@ -1,0 +1,86 @@
+name: Step 4 - Convert G01 gallery to WebP
+
+on:
+  push:
+    branches:
+      - feat/portfolio-preview-v02
+    paths:
+      - .github/workflows/step-04-g01-webp.yml
+
+permissions:
+  contents: write
+
+jobs:
+  g01-to-webp:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/portfolio-preview-v02
+
+      - name: Convert five G01 photos with source and output validation
+        run: |
+          python -m pip install --disable-pip-version-check Pillow==11.3.0
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from PIL import Image, ImageOps, features
+
+          assert features.check('webp'), 'WebP encoding is unavailable'
+          folder = Path('docs/assets/images/projects/g01')
+          config_path = Path('docs/config/site.json')
+          raw = config_path.read_text(encoding='utf-8')
+          before = json.loads(raw)
+          project = next(p for p in before['projects'] if p['id'] == 'g01')
+          names = ['cover', 'gallery-11', 'gallery-23', 'gallery-52', 'gallery-56']
+          old_paths = [f'./assets/images/projects/g01/{name}.jpg' for name in names]
+          assert project['cover'] == old_paths[0], 'G01 cover is not expected'
+          assert project['images'] == old_paths, 'G01 gallery has unexpected order'
+          updated_raw = raw
+          total_jpeg, total_webp = 0, 0
+
+          for name in names:
+              source = folder / f'{name}.jpg'
+              dest = folder / f'{name}.webp'
+              assert source.is_file(), f'JPEG source missing: {source}'
+              assert not dest.exists(), f'WebP already exists: {dest}'
+              with Image.open(source) as jpg:
+                  photograph = ImageOps.exif_transpose(jpg)
+                  expected_dimensions = photograph.size
+                  options = {'format':'WEBP', 'quality':86, 'method':6}
+                  if jpg.info.get('icc_profile'):
+                      options['icc_profile'] = jpg.info['icc_profile']
+                  photograph.convert('RGB').save(dest, **options)
+              with Image.open(dest) as test:
+                  test.load()
+                  assert test.format == 'WEBP'
+                  assert test.size == expected_dimensions, f'Wrong dimensions: {dest}'
+              jpg_bytes, webp_bytes = source.stat().st_size, dest.stat().st_size
+              assert webp_bytes < jpg_bytes, f'WebP not smaller for {name}'
+              total_jpeg += jpg_bytes
+              total_webp += webp_bytes
+              old = f'./assets/images/projects/g01/{name}.jpg'
+              new = f'./assets/images/projects/g01/{name}.webp'
+              occurrence_count = 2 if name == 'cover' else 1
+              assert updated_raw.count(old) == occurrence_count, f'Unexpected references for {old}'
+              updated_raw = updated_raw.replace(old, new)
+              print(f'{source.name}: {jpg_bytes:,} => {dest.name}: {webp_bytes:,} bytes')
+
+          after = json.loads(updated_raw)
+          assert after['homeImages'] == before['homeImages'], 'Home references changed'
+          assert {p['id']:p for p in before['projects'] if p['id'] != 'g01'} == {p['id']:p for p in after['projects'] if p['id'] != 'g01'}, 'Other projects changed'
+          new_project = next(p for p in after['projects'] if p['id'] == 'g01')
+          assert new_project['cover'] == './assets/images/projects/g01/cover.webp'
+          assert new_project['images'] == [f'./assets/images/projects/g01/{n}.webp' for n in names]
+          config_path.write_text(updated_raw, encoding='utf-8')
+          print(f'TOTAL original={total_jpeg:,} converted={total_webp:,} saved={100*(total_jpeg-total_webp)/total_jpeg:.1f}%')
+          PY
+
+      - name: Commit only G01 WebP assets and references
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/assets/images/projects/g01/*.webp docs/config/site.json
+          git diff --cached --quiet && exit 0
+          git commit -m "perf(g01): serve five project photos as optimized WebP"
+          git push origin HEAD:feat/portfolio-preview-v02

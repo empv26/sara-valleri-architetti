@@ -1,0 +1,447 @@
+(function(){
+"use strict";
+const root=document.getElementById("app");
+const routes=["home","projects","about","contact"];
+let site=null,lang=localStorage.getItem("sv-lang")==="en"?"en":"it";
+const t=(it,en)=>lang==="en"?en:it;
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const url=(page,project)=>"?page="+encodeURIComponent(page)+(project?"&project="+encodeURIComponent(project):"");
+const imageError='this.onerror=null;this.parentElement.classList.add("missing-photo")';
+
+/* STEP 1: Preload and decode Home photographs without replacing the visible one. */
+const homePhotoCache=new Map();
+let homeViewId=0;
+let homeSwitching=false;
+let homeWanted=null;
+let routeRequestId=0;
+function preloadHomePhoto(src){
+ if(homePhotoCache.has(src))return homePhotoCache.get(src);
+ const img=new Image();
+ const ready=new Promise((resolve,reject)=>{
+  img.onload=()=>{
+   if(typeof img.decode==="function")img.decode().catch(()=>{}).then(()=>resolve(img));
+   else resolve(img);
+  };
+  img.onerror=()=>reject(new Error("Home photo unavailable"));
+ });
+ homePhotoCache.set(src,ready);
+ ready.catch(()=>{if(homePhotoCache.get(src)===ready)homePhotoCache.delete(src);});
+ img.src=src;
+ return ready;
+}
+function preloadAllHomePhotos(){
+ if(site&&Array.isArray(site.homeImages)){
+  for(const src of site.homeImages)preloadHomePhoto(src).catch(()=>{});
+ }
+}
+function homeStepBase(){
+ return Number.isInteger(homeWanted)?homeWanted:Number(sessionStorage.getItem("sv-home-slide")||0);
+}
+function selectedHomePhoto(){
+ const images=site?.homeImages||[];
+ if(!images.length)return "";
+ const index=Number(sessionStorage.getItem("sv-home-slide")||0);
+ return images[Number.isInteger(index)&&index>=0&&index<images.length?index:0];
+}
+
+
+/* STEP 2 — preload only the next page's primary photo on user intent. */
+const warmImageCache=new Map();
+const primaryPageImages={
+ about:"./assets/images/about/portrait.webp",
+ contact:"./assets/images/contact/sara-contact.webp"
+};
+const firstProjectImageDimensions={
+ m64:[1365,2048],
+ r14:[2000,3000],
+ g01:[3000,2000],
+ g02:[2999,2000],
+ a28:[4284,5712]
+};
+function imageDimensions(size){
+ return size?' width="'+size[0]+'" height="'+size[1]+'"':'';
+}
+
+/* G01/G02 only: reserve exact geometry and request distant photos as they approach
+   the viewport. Fullscreen always uses original URLs; no asset recompression. */
+const progressiveProjectDimensions={
+ g01:[[3000,2000],[2000,2999],[2000,3000],[2000,3000],[2000,2999],[2000,3000],[2999,2000],[2000,2999],[2000,2999],[2000,2999],[2999,2000],[2000,2999],[2000,2999],[3000,2000],[2000,2999],[2000,2999],[2999,2000],[2000,2999]],
+ g02:[[2999,2000],[2000,2998],[2000,2999],[2000,2999],[2000,2999],[2001,3000],[2000,2999],[2000,2999],[2000,3000],[2000,2999],[2001,3000],[2000,2999],[2000,2999],[2000,3000],[2000,2999],[2000,2998]]
+};
+let projectGalleryObserver=null;
+function activateProgressiveProjectGallery(){
+ if(projectGalleryObserver){projectGalleryObserver.disconnect();projectGalleryObserver=null;}
+ const deferred=Array.from(root.querySelectorAll(".project-view img[data-progressive-src]"));
+ if(!deferred.length)return;
+ const load=img=>{
+  const src=img.dataset.progressiveSrc;
+  if(!src)return;
+  delete img.dataset.progressiveSrc;
+  img.addEventListener("load",()=>{img.style.visibility="";},{once:true});
+  img.src=src;
+  if(img.complete&&img.naturalWidth)img.style.visibility="";
+ };
+ if(typeof IntersectionObserver!=="function"){deferred.forEach(load);return;}
+ const observer=new IntersectionObserver(entries=>{
+  for(const entry of entries){
+   if(!entry.isIntersecting)continue;
+   observer.unobserve(entry.target);
+   load(entry.target);
+  }
+ },{rootMargin:"1000px 0px",threshold:0});
+ projectGalleryObserver=observer;
+ deferred.forEach(img=>observer.observe(img));
+}
+
+function warmPageImage(src){
+ if(!src||warmImageCache.has(src))return;
+ const img=new Image();
+ img.decoding="async";
+ img.fetchPriority="low";
+ warmImageCache.set(src,img);
+ img.onerror=()=>{if(warmImageCache.get(src)===img)warmImageCache.delete(src);};
+ img.src=src;
+}
+function warmDestination(target){
+ const link=target&&target.closest?target.closest("a[data-link],a.brand"):null;
+ if(!site||!link)return;
+ const href=link.getAttribute("href")||"";
+ if(!href.startsWith("?"))return;
+ const params=new URLSearchParams(href.slice(1));
+ const page=params.get("page");
+ if(page==="home"){
+  const src=selectedHomePhoto();
+  if(src)preloadHomePhoto(src).catch(()=>{});
+  return;
+ }
+ if(primaryPageImages[page]){
+  warmPageImage(primaryPageImages[page]);
+  return;
+ }
+ if(page!=="projects")return;
+ const id=params.get("project");
+ if(id){
+  const project=site.projects.find(p=>p.id===id);
+  if(project)warmPageImage(project.images?.[0]||project.cover);
+  return;
+ }
+ // Overview: do not prefetch all covers; warm just the first two.
+ site.projects.slice(0,2).forEach(p=>warmPageImage(p.cover));
+}
+
+const navItem=(page,label,active)=>'<a href="'+url(page)+'" data-link'+(active?' class="active" aria-current="page"':'')+'>'+label+'</a>';
+function getRoute(){const q=new URLSearchParams(location.search);return{page:routes.includes(q.get("page"))?q.get("page"):"home",project:q.get("project")||"",preview:q.get("preview")==="1"};}
+function rail(page){return '<aside class="site-rail"><a class="brand" href="'+url("home")+'" aria-label="Sara Valleri Architetti — Home"><img src="'+(page==="home"?"./assets/logo-white.svg":"./assets/logo-black.svg")+'" alt="Sara Valleri Architetti"></a><nav class="rail-links" aria-label="'+t("Navigazione principale","Main navigation")+'">'+navItem("projects",t("Projects","Projects"),page==="projects")+navItem("about","About",page==="about")+navItem("contact","Contact",page==="contact")+'<a href="https://www.instagram.com/svarchitetti/" target="_blank" rel="noopener noreferrer">Instagram</a></nav><div class="rail-bottom"><button type="button" class="lang" data-lang="it" aria-pressed="'+(lang==="it")+'">IT</button><span class="faded">/</span><button type="button" class="lang" data-lang="en" aria-pressed="'+(lang==="en")+'">EN</button></div><span class="credit">© '+new Date().getFullYear()+' Sara Valleri Architetti</span></aside>';}
+function home(){
+ const images=site.homeImages||[];
+ let i=Number(sessionStorage.getItem("sv-home-slide")||0);
+ if(!Number.isInteger(i)||i<0||i>=images.length)i=0;
+ const img=images[i]||"";
+ const total=String(images.length).padStart(2,"0");
+ return '<section class="home-page" data-home-index="'+i+'" aria-label="'+t("Galleria fotografica Home","Home photo gallery")+'">'
+ +'<img class="home-img is-current" src="'+esc(img)+'" alt="'+t("Architettura e interni — fotografia","Architecture and interiors — photograph")+' '+(i+1)+'" fetchpriority="high">'
+ +'<div class="home-carousel" role="group" aria-label="'+t("Naviga le quattro immagini","Navigate the four photographs")+'">'
+ +'<div class="home-counter" aria-live="polite">'+String(i+1).padStart(2,"0")+' <span>/</span> '+total+'</div>'
+ +'<div class="home-pager">'+images.map((v,k)=>'<button type="button" class="home-dot'+(k===i?' is-active':'')+'" data-hero="'+k+'" aria-label="'+t("Vai alla foto ","Go to photo ")+(k+1)+'" aria-pressed="'+(k===i)+'"></button>').join("")+'</div>'
+ +'<button type="button" class="home-arrow" data-home-step="-1" aria-label="'+t("Foto precedente","Previous photo")+'">←</button>'
+ +'<button type="button" class="home-arrow" data-home-step="1" aria-label="'+t("Foto successiva","Next photo")+'">→</button>'
+ +'</div><footer class="home-vat">P. IVA 04362550164</footer></section>';
+}
+function goHomeSlide(index){
+ if(!site||getRoute().page!=="home"||!Number.isFinite(index))return;
+ const count=site.homeImages.length;
+ if(!count)return;
+ homeWanted=(index%count+count)%count;
+ if(!homeSwitching)advanceHomeSlide();
+}
+function advanceHomeSlide(){
+ const frame=document.querySelector(".home-page");
+ if(!frame||!site||getRoute().page!=="home"||homeSwitching)return;
+ const current=Number(frame.dataset.homeIndex||0);
+ const next=homeWanted;
+ if(!Number.isInteger(next)||next===current)return;
+ homeSwitching=true;
+ const viewId=homeViewId;
+ const src=site.homeImages[next];
+ preloadHomePhoto(src).then(incoming=>{
+  if(viewId!==homeViewId||!frame.isConnected||getRoute().page!=="home")return;
+  if(homeWanted!==next){
+   homeSwitching=false;
+   advanceHomeSlide();
+   return;
+  }
+  const outgoing=frame.querySelector(".home-img.is-current");
+  if(!outgoing){homeSwitching=false;return;}
+  incoming.className="home-img home-img-incoming";
+  incoming.alt=t("Architettura e interni — fotografia","Architecture and interiors — photograph")+" "+(next+1);
+  frame.insertBefore(incoming,frame.querySelector(".home-carousel"));
+  let completed=false;
+  function complete(){
+   if(completed)return;
+   completed=true;
+   if(viewId!==homeViewId||!frame.isConnected)return;
+   outgoing.remove();
+   incoming.className="home-img is-current";
+   frame.dataset.homeIndex=String(next);
+   sessionStorage.setItem("sv-home-slide",String(next));
+   homeSwitching=false;
+   if(homeWanted!==next)advanceHomeSlide();
+  }
+  incoming.addEventListener("transitionend",event=>{
+   if(event.target===incoming&&event.propertyName==="opacity")complete();
+  });
+  const counter=frame.querySelector(".home-counter");
+  if(counter)counter.innerHTML=String(next+1).padStart(2,"0")+' <span>/</span> '+String(site.homeImages.length).padStart(2,"0");
+  frame.querySelectorAll(".home-dot").forEach((dot,i)=>{
+   dot.classList.toggle("is-active",i===next);
+   dot.setAttribute("aria-pressed",String(i===next));
+  });
+  // Leave the previous photo fully opaque until the new one is decoded and rendered.
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+   if(viewId===homeViewId&&frame.isConnected)incoming.classList.add("is-visible");
+  }));
+  // Also finish if motion is disabled or the tab is in the background.
+  setTimeout(complete,800);
+ }).catch(()=>{
+  if(viewId!==homeViewId)return;
+  homeSwitching=false;
+  homeWanted=Number(frame.dataset.homeIndex||0);
+ });
+}
+function cover(p,index){const first=index<2;return '<span class="cover-frame"><img src="'+esc(p.cover)+'" alt="'+esc(p.title)+' — '+t("copertina progetto","project cover")+'" loading="'+(first?"eager":"lazy")+'" decoding="async"'+(first?' fetchpriority="high"':'')+' onerror=\''+imageError+'\'></span>';}
+function overview(){return '<section class="overview"><div class="topline"><h1 class="section-heading">'+t("PROGETTI","PROJECTS")+'</h1><span class="eyebrow">01 — 05</span></div><div class="project-grid">'+site.projects.map((p,index)=>'<a class="project-card" data-link href="'+url("projects",p.id)+'" aria-label="'+t("Apri il progetto","Open project")+' '+esc(p.title)+'">'+cover(p,index)+'<div class="project-meta"><strong>'+esc(p.title)+'</strong><small>'+esc(p.city)+' / '+esc(p.year)+'</small></div></a>').join("")+'</div><div class="more">'+t("Architettura, interni, residenziale.","Architecture, interiors, residential.")+'</div></section>';}
+function detail(p){
+ const next=site.projects[(site.projects.indexOf(p)+1)%site.projects.length];
+ const imgs=p.images&&p.images.length?p.images:[p.cover];
+ const dims=progressiveProjectDimensions[p.id];
+ if(dims&&dims.length!==imgs.length)throw new Error("Project photo dimensions mismatch: "+p.id);
+ const figures=imgs.map((s,i)=>{
+  if(!dims){
+   return '<figure class="gallery-figure"><img data-gallery-index="'+i+'" role="button" tabindex="0" aria-label="'+t("Apri foto a schermo intero","Open photo fullscreen")+' '+(i+1)+' — '+esc(p.title)+'" src="'+esc(s)+'" alt="'+esc(p.title)+' — '+t("fotografia","photograph")+' '+(i+1)+'" '+(i?'loading="lazy" decoding="async"':'loading="eager" decoding="async" fetchpriority="high"'+imageDimensions(firstProjectImageDimensions[p.id]))+' onerror=\''+imageError+'\'></figure>';
+  }
+  const deferred=i>1;
+  const photoSource=deferred?' data-progressive-src="'+esc(s)+'" class="gallery-deferred" style="visibility:hidden" loading="eager" decoding="async"':' src="'+esc(s)+'" loading="eager" decoding="async"'+(i===0?' fetchpriority="high"':'');
+  return '<figure class="gallery-figure"><img data-gallery-index="'+i+'" role="button" tabindex="0" aria-label="'+t("Apri foto a schermo intero","Open photo fullscreen")+' '+(i+1)+' — '+esc(p.title)+'"'+photoSource+' alt="'+esc(p.title)+' — '+t("fotografia","photograph")+' '+(i+1)+'"'+imageDimensions(dims[i])+' onerror=\''+imageError+'\'></figure>';
+ }).join("");
+ return '<article class="project-view"><div class="gallery">'+figures+'</div><aside class="project-info"><a class="back" data-link href="'+url("projects")+'">← '+t("Tutti i progetti","All projects")+'</a><h1>'+esc(p.title)+'</h1><div class="info-meta">'+esc(p.city)+' · '+esc(p.year)+'<br>'+esc(t(p.kindIt,p.kindEn))+'<br>'+t("Committente privato","Private client")+'</div><div class="info-desc">'+esc(t(p.descriptionIt,p.descriptionEn))+'</div><div class="info-footer">'+t("Fotografie","Photography")+': Elena Pegurri<br><a class="next-link" data-link href="'+url("projects",next.id)+'">'+t("Progetto successivo","Next project")+' → '+esc(next.title)+'</a></div></aside></article>';
+}
+function about(){
+ const paragraphs=t(["SV Architetti è uno studio di architettura d'interni fondato dall'architetto Sara Valleri nel 2023, con sede a Bergamo.","La ricerca progettuale dello studio nasce dal viaggio e dalla scoperta di nuove culture, intesi come strumenti di conoscenza, ispirazione e contaminazione. L'incontro con luoghi, tradizioni e linguaggi differenti alimenta una visione progettuale aperta, sensibile alla storia e all'identità dei contesti.","La ricerca di materiali autentici, lavorazioni artigianali e superfici capaci di raccontare una storia costituisce il fondamento di ogni progetto. Attraverso un approccio sartoriale, lo studio sviluppa progetti residenziali e commerciali, seguendone ogni fase, dal concept alla realizzazione, fino alla cura del dettaglio.","Il dialogo con il cliente, l'ascolto delle sue esigenze e la collaborazione con artigiani e maestranze locali danno vita a spazi personali e senza tempo, in cui linguaggi classici, moderni e contemporanei si incontrano in equilibrio.","La cucitura di un ricordo, di un profumo, di una sensazione. La generazione di un'emozione attraverso lo spazio."],["SV Architetti is an interior architecture studio founded by architect Sara Valleri in 2023, based in Bergamo.","The studio's design research stems from travel and the discovery of new cultures, seen as ways to gain knowledge, find inspiration and bring different influences together. Encounters with different places, traditions and forms of expression nurture an open approach to design, sensitive to the history and identity of each setting.","The search for authentic materials, artisanal craftsmanship and surfaces that tell a story lies at the heart of every project. With a bespoke approach, the studio creates residential and commercial spaces, overseeing every stage, from concept to completion and the smallest detail.","Dialogue with clients, attentive listening to their needs and collaboration with local craftspeople give rise to personal, timeless spaces where classical, modern and contemporary languages meet in balance.","Weaving together a memory, a scent, a sensation. Creating an emotion through space."]);
+ return '<section class="simple-page about-page"><div class="about-layout"><figure class="about-visual"><img class="about-image" src="./assets/images/about/portrait.webp" width="2000" height="2999" loading="eager" decoding="async" fetchpriority="high" alt="Sara Valleri Architetti"><figcaption class="caption">SV Architetti — Bergamo</figcaption></figure><aside class="about-copy"><h1 class="section-heading">ABOUT</h1><h2>SV Architetti</h2>'+paragraphs.map(p=>'<p>'+esc(p)+'</p>').join('')+'</aside></div></section>';
+}
+function contact(){
+ return '<section class="simple-page contact-page contact-editorial">'
+  +'<div class="contact-layout">'
+  +'<figure class="contact-visual"><img class="contact-image" src="./assets/images/contact/sara-contact.webp" width="2000" height="3001" loading="eager" decoding="async" alt="'+t("Immagine per i contatti di Sara Valleri Architetti","Image for Sara Valleri Architetti contact page")+'" fetchpriority="high"><figcaption class="caption">Sara Valleri Architetti — Milano</figcaption></figure>'
+  +'<div class="contact-copy">'
+  +'<h1 class="section-heading">CONTACT</h1>'
+  +'<div class="contact-editorial-main">'
+  +'<a class="editorial-email" href="mailto:sara@svarchitetti.com">sara@svarchitetti.com</a>'
+  +'<a class="editorial-instagram" href="https://www.instagram.com/svarchitetti/" target="_blank" rel="noopener noreferrer">Instagram</a>'
+  +'</div>'
+  +'<div class="contact-editorial-meta"><p>Sara Valleri</p><p>P. IVA 04362550164</p><p>'+t("Milano · Italia","Milan · Italy")+'</p></div>'
+  +'</div></div>'
+  +'</section>';
+}
+
+/* STEP 3 — project-only fullscreen photo viewer.
+   It never changes the source gallery, photo order or scroll position. */
+let projectLightbox=null;
+function closeProjectLightbox(){
+ const state=projectLightbox;
+ if(!state)return;
+ projectLightbox=null;
+ state.requestId++;
+ state.overlay.remove();
+ document.body.style.overflow=state.previousOverflow;
+ if(state.trigger&&state.trigger.isConnected)state.trigger.focus({preventScroll:true});
+}
+function openProjectLightbox(project,index,trigger){
+ const photos=project.images?.length?project.images:[project.cover];
+ if(!photos.length||index<0||index>=photos.length)return;
+ closeProjectLightbox();
+ const overlay=document.createElement("div");
+ overlay.className="sv-lightbox";
+ overlay.setAttribute("role","dialog");
+ overlay.setAttribute("aria-modal","true");
+ overlay.setAttribute("aria-label",t("Galleria fotografica","Photo gallery")+" — "+project.title);
+ const navigation=photos.length>1
+  ?'<button type="button" class="sv-lightbox-arrow sv-lightbox-prev" data-lightbox-prev aria-label="'+t("Foto precedente","Previous photo")+'">&#8249;</button><button type="button" class="sv-lightbox-arrow sv-lightbox-next" data-lightbox-next aria-label="'+t("Foto successiva","Next photo")+'">&#8250;</button>'
+  :"";
+ overlay.innerHTML='<button type="button" class="sv-lightbox-close" data-lightbox-close aria-label="'+t("Chiudi galleria","Close gallery")+'">&times;</button>'
+  +'<div class="sv-lightbox-stage" data-lightbox-stage><img class="sv-lightbox-image" src="'+esc(photos[index])+'" alt="'+esc(project.title)+' — '+t("fotografia","photograph")+' '+(index+1)+'" draggable="false"></div>'
+  +navigation
+  +'<span class="sv-lightbox-sr" aria-live="polite" data-lightbox-status></span>';
+ const state={
+  overlay,photos,index,wanted:index,requestId:0,trigger,
+  previousOverflow:document.body.style.overflow,
+  title:project.title
+ };
+ projectLightbox=state;
+ document.body.appendChild(overlay);
+ document.body.style.overflow="hidden";
+ const status=overlay.querySelector("[data-lightbox-status]");
+ status.textContent=t("Fotografia","Photograph")+" "+(index+1)+" / "+photos.length;
+ overlay.querySelector("[data-lightbox-close]").focus({preventScroll:true});
+ let touchStart=null;
+ overlay.addEventListener("touchstart",event=>{
+  if(event.touches.length!==1)return;
+  touchStart={x:event.touches[0].clientX,y:event.touches[0].clientY};
+ },{passive:true});
+ overlay.addEventListener("touchend",event=>{
+  if(!touchStart||event.changedTouches.length!==1)return;
+  const dx=event.changedTouches[0].clientX-touchStart.x;
+  const dy=event.changedTouches[0].clientY-touchStart.y;
+  touchStart=null;
+  if(Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy)*1.25)moveProjectLightbox(dx<0?1:-1);
+ },{passive:true});
+}
+function moveProjectLightbox(delta){
+ const state=projectLightbox;
+ if(!state||state.photos.length<2)return;
+ const next=(state.wanted+delta+state.photos.length)%state.photos.length;
+ state.wanted=next;
+ const token=++state.requestId;
+ const source=state.photos[next];
+ const ready=new Image();
+ ready.decoding="async";
+ ready.onload=()=>{
+  const decode=typeof ready.decode==="function"?ready.decode().catch(()=>{}):Promise.resolve();
+  decode.then(()=>{
+   if(projectLightbox!==state||token!==state.requestId)return;
+   const image=state.overlay.querySelector(".sv-lightbox-image");
+   if(!image)return;
+   image.src=source;
+   image.alt=state.title+" — "+t("fotografia","photograph")+" "+(next+1);
+   state.index=next;
+   state.overlay.querySelector("[data-lightbox-status]").textContent=t("Fotografia","Photograph")+" "+(next+1)+" / "+state.photos.length;
+  });
+ };
+ ready.onerror=()=>{
+  if(projectLightbox!==state||token!==state.requestId)return;
+  state.wanted=state.index;
+  state.overlay.querySelector("[data-lightbox-status]").textContent=t("Impossibile caricare la fotografia","Unable to load photograph");
+ };
+ ready.src=source;
+}
+
+function render(scroll=true,decodedHomeImage=null){
+ if(!site)return;
+ closeProjectLightbox();
+ homeViewId++;
+ homeSwitching=false;
+ homeWanted=null;
+ const r=getRoute();
+ document.body.classList.toggle("is-home",r.page==="home");
+ document.documentElement.lang=lang;
+ const p=site.projects.find(v=>v.id===r.project);
+ const body=r.page==="home"?home(r.preview):r.page==="about"?about():r.page==="contact"?contact():p?detail(p):overview();
+ root.innerHTML=rail(r.page)+'<main class="site-main" id="main">'+body+'</main>';
+ if(r.page==="home"){
+  const placeholder=root.querySelector(".home-page .home-img.is-current");
+  if(decodedHomeImage&&placeholder){
+   // Transfer the already decoded image node into the new view before the browser paints.
+   decodedHomeImage.className=placeholder.className;
+   decodedHomeImage.alt=placeholder.alt;
+   decodedHomeImage.setAttribute("fetchpriority","high");
+   placeholder.replaceWith(decodedHomeImage);
+  }
+ }
+ activateProgressiveProjectGallery();
+ document.title=(p?p.title+" — ":r.page!=="home"?r.page.charAt(0).toUpperCase()+r.page.slice(1)+" — ":"")+"Sara Valleri Architetti";
+ if(r.page==="home"){
+  const frame=root.querySelector(".home-page");
+  homeWanted=Number(frame?.dataset.homeIndex||0);
+  preloadAllHomePhotos();
+ }
+ if(scroll)window.scrollTo({top:0,behavior:"instant"});
+}
+function showRoute(scroll=true){
+ if(!site)return;
+ const requestId=++routeRequestId;
+ if(getRoute().page!=="home"){render(scroll);return;}
+ const src=selectedHomePhoto();
+ if(!src){render(scroll);return;}
+ // Keep the previous view visible until the Home image is fully decoded.
+ preloadHomePhoto(src).then(image=>{
+  if(requestId===routeRequestId&&getRoute().page==="home")render(scroll,image);
+ }).catch(()=>{
+  if(requestId===routeRequestId&&getRoute().page==="home")render(scroll);
+ });
+}
+document.addEventListener("pointerover",ev=>warmDestination(ev.target));
+document.addEventListener("focusin",ev=>warmDestination(ev.target));
+document.addEventListener("pointerdown",ev=>warmDestination(ev.target));
+document.addEventListener("click",ev=>{
+ const viewer=ev.target.closest(".sv-lightbox");
+ if(viewer){
+  if(ev.target.closest("[data-lightbox-close]")||ev.target===viewer||ev.target.hasAttribute("data-lightbox-stage"))closeProjectLightbox();
+  else if(ev.target.closest("[data-lightbox-prev]"))moveProjectLightbox(-1);
+  else if(ev.target.closest("[data-lightbox-next]"))moveProjectLightbox(1);
+  return;
+ }
+ const target=ev.target.closest(".project-view .gallery-figure img[data-gallery-index]");
+ if(target){
+  const route=getRoute();
+  const project=site?.projects.find(p=>p.id===route.project);
+  if(project)openProjectLightbox(project,Number(target.dataset.galleryIndex),target);
+  return;
+ }
+ const language=ev.target.closest("[data-lang]");if(language){lang=language.getAttribute("data-lang");localStorage.setItem("sv-lang",lang);showRoute(false);return;}const pic=ev.target.closest("[data-hero]");if(pic){goHomeSlide(Number(pic.getAttribute("data-hero")));return;}const step=ev.target.closest("[data-home-step]");if(step){goHomeSlide(homeStepBase()+Number(step.getAttribute("data-home-step")));return;}const a=ev.target.closest("a[data-link],a.brand");if(a&&a.origin===location.origin){ev.preventDefault();history.pushState(null,"",a.getAttribute("href"));showRoute();}});
+
+/* Fullscreen gallery keyboard support and focus containment. */
+window.addEventListener("keydown",event=>{
+ const state=projectLightbox;
+ if(!state||event.altKey||event.ctrlKey||event.metaKey)return;
+ if(event.key==="Escape"){event.preventDefault();closeProjectLightbox();return;}
+ if(event.key==="ArrowLeft"||event.key==="ArrowRight"){
+  event.preventDefault();moveProjectLightbox(event.key==="ArrowRight"?1:-1);return;
+ }
+ if(event.key==="Tab"){
+  const buttons=Array.from(state.overlay.querySelectorAll("button"));
+  const current=buttons.indexOf(document.activeElement);
+  if(!buttons.length)return;
+  if(event.shiftKey&&current<=0){event.preventDefault();buttons[buttons.length-1].focus();}
+  else if(!event.shiftKey&&current===buttons.length-1){event.preventDefault();buttons[0].focus();}
+ }
+});
+window.addEventListener("keydown",event=>{
+ if(projectLightbox||event.altKey||event.ctrlKey||event.metaKey)return;
+ const target=event.target.closest?.(".project-view .gallery-figure img[data-gallery-index]");
+ if(!target||(event.key!=="Enter"&&event.key!==" "))return;
+ event.preventDefault();
+ const route=getRoute();
+ const project=site?.projects.find(p=>p.id===route.project);
+ if(project)openProjectLightbox(project,Number(target.dataset.galleryIndex),target);
+});
+
+let lastHomeWheel=0;
+window.addEventListener("wheel",ev=>{
+ if(!site||getRoute().page!=="home"||Math.abs(ev.deltaY)<14||ev.ctrlKey)return;
+ ev.preventDefault();
+ const now=Date.now();if(now-lastHomeWheel<720)return;
+ lastHomeWheel=now;
+ goHomeSlide(homeStepBase()+(ev.deltaY>0?1:-1));
+},{passive:false});
+window.addEventListener("keydown",ev=>{
+ if(!site||getRoute().page!=="home"||ev.altKey||ev.ctrlKey||ev.metaKey||["INPUT","TEXTAREA","SELECT"].includes(document.activeElement.tagName))return;
+ const delta={"ArrowRight":1,"ArrowDown":1,"ArrowLeft":-1,"ArrowUp":-1}[ev.key];
+ if(!delta)return;
+ ev.preventDefault();goHomeSlide(homeStepBase()+delta);
+});
+let homeTouchStart=null;
+window.addEventListener("touchstart",ev=>{
+ if(getRoute().page!=="home"||ev.target.closest(".site-rail"))return;
+ homeTouchStart={x:ev.changedTouches[0].clientX,y:ev.changedTouches[0].clientY};
+},{passive:true});
+window.addEventListener("touchend",ev=>{
+ if(!homeTouchStart||getRoute().page!=="home")return;
+ const dx=ev.changedTouches[0].clientX-homeTouchStart.x,dy=ev.changedTouches[0].clientY-homeTouchStart.y;
+ homeTouchStart=null;
+ if(Math.max(Math.abs(dx),Math.abs(dy))<55)return;
+ const delta=Math.abs(dx)>Math.abs(dy)?(dx<0?1:-1):(dy<0?1:-1);
+ goHomeSlide(homeStepBase()+delta);
+},{passive:true});
+window.addEventListener("popstate",()=>showRoute());
+fetch("./config/site.json",{cache:"no-store"}).then(r=>{if(!r.ok)throw new Error("Missing site data");return r.json();}).then(x=>{site=x;showRoute();}).catch(()=>{root.innerHTML='<p class="loading">Impossibile caricare la configurazione del sito. / Site configuration unavailable.</p>';});
+})();

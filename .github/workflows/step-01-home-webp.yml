@@ -1,0 +1,69 @@
+name: Step 1 - Convert Home photos to WebP
+
+on:
+  push:
+    branches:
+      - feat/portfolio-preview-v02
+    paths:
+      - .github/workflows/step-01-home-webp.yml
+
+permissions:
+  contents: write
+
+jobs:
+  home-to-webp:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/portfolio-preview-v02
+
+      - name: Convert and verify the four Home photos
+        run: |
+          python -m pip install --disable-pip-version-check Pillow==11.3.0
+          python - <<'PY'
+          from pathlib import Path
+          from PIL import Image, ImageOps, features
+          import re
+
+          assert features.check('webp'), 'Pillow was built without WebP support'
+          root = Path('docs/assets/images/home')
+          config_path = Path('docs/config/site.json')
+          config = config_path.read_text(encoding='utf-8')
+
+          for index in range(1, 5):
+              original = root / f'{index:02d}.jpg'
+              converted = root / f'{index:02d}.webp'
+              assert original.is_file(), f'Missing source: {original}'
+              assert not converted.exists(), f'Unexpected existing WebP: {converted}'
+              with Image.open(original) as source:
+                  image = ImageOps.exif_transpose(source)
+                  image = image.convert('RGB')
+                  expected_size = image.size
+                  kwargs = {'format': 'WEBP', 'quality': 86, 'method': 6}
+                  if source.info.get('icc_profile'):
+                      kwargs['icc_profile'] = source.info['icc_profile']
+                  image.save(converted, **kwargs)
+              with Image.open(converted) as check:
+                  check.load()
+                  assert check.format == 'WEBP'
+                  assert check.size == expected_size
+              assert converted.stat().st_size < original.stat().st_size, f'Not optimized: {converted}'
+              old_ref = f'./assets/images/home/{index:02d}.jpg'
+              new_ref = f'./assets/images/home/{index:02d}.webp'
+              assert config.count(old_ref) == 1, f'Expected exactly one Home reference: {old_ref}'
+              config = config.replace(old_ref, new_ref)
+              print(f'{original.name} {original.stat().st_size:,} -> {converted.name} {converted.stat().st_size:,} bytes')
+
+          assert all(f'./assets/images/home/{index:02d}.webp' in config for index in range(1, 5))
+          config_path.write_text(config, encoding='utf-8')
+          PY
+
+      - name: Commit Home WebP images and references
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/assets/images/home/*.webp docs/config/site.json
+          git diff --cached --exit-code && exit 0
+          git commit -m "perf(home): switch four Home photos to verified WebP"
+          git push origin HEAD:feat/portfolio-preview-v02
