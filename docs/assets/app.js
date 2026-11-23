@@ -131,6 +131,38 @@ function warmDestination(target){
 
 const navItem=(page,label,active)=>'<a href="'+url(page)+'" data-link'+(active?' class="active" aria-current="page"':'')+'>'+label+'</a>';
 function getRoute(){const q=new URLSearchParams(location.search);return{page:routes.includes(q.get("page"))?q.get("page"):"home",project:q.get("project")||"",preview:q.get("preview")==="1"};}
+
+/* Keep one canonical URL and relevant metadata for each SPA route. */
+function setSeoMeta(attribute,key,value){
+ let tag=document.head.querySelector('meta['+attribute+'="'+key+'"]');
+ if(!tag){tag=document.createElement("meta");tag.setAttribute(attribute,key);document.head.appendChild(tag);}
+ tag.setAttribute("content",value);
+}
+function seoExcerpt(value){
+ const clean=String(value||"").replace(/\s+/g," ").trim();
+ return clean.length>165?clean.slice(0,160).replace(/\s+\S*$/,"")+"…":clean;
+}
+function updateSearchMetadata(route,project){
+ const activeProject=route.page==="projects"?project:null;
+ const base="https://www.svarchitetti.com/";
+ const canonical=route.page==="projects"
+  ?base+"?page=projects"+(activeProject?"&project="+encodeURIComponent(activeProject.id):"")
+  :route.page==="about"||route.page==="contact"?base+"?page="+route.page:base;
+ let link=document.head.querySelector('link[rel="canonical"]');
+ if(!link){link=document.createElement("link");link.rel="canonical";document.head.appendChild(link);}
+ link.href=canonical;
+ const description=activeProject?seoExcerpt(t(activeProject.descriptionIt,activeProject.descriptionEn))
+  :route.page==="projects"?t("Progetti selezionati di Sara Valleri Architetti: M 64, R 14, G 01, G 02 e A 28.","Selected projects by Sara Valleri Architetti: M 64, R 14, G 01, G 02 and A 28.")
+  :route.page==="about"?t("Sara Valleri Architetti: ricerca progettuale, materiali, artigianalità e architettura d'interni.","Sara Valleri Architetti: design research, materials, craftsmanship and interior architecture.")
+  :route.page==="contact"?t("Contatta Sara Valleri Architetti per informazioni su progetti di architettura e interior design.","Contact Sara Valleri Architetti for information about architecture and interior design projects.")
+  :t("Sara Valleri Architetti — architettura e interior design, Milano.","Sara Valleri Architetti — architecture and interior design, Milan.");
+ setSeoMeta("name","description",description);
+ setSeoMeta("property","og:title",document.title);
+ setSeoMeta("property","og:description",description);
+ setSeoMeta("property","og:url",canonical);
+ setSeoMeta("property","og:locale",lang==="en"?"en_US":"it_IT");
+}
+
 function rail(page){return '<aside class="site-rail"><a class="brand" href="'+url("home")+'" aria-label="Sara Valleri Architetti — Home"><img src="'+(page==="home"?"./assets/logo-white.svg":"./assets/logo-black.svg")+'" alt="Sara Valleri Architetti"></a><nav class="rail-links" aria-label="'+t("Navigazione principale","Main navigation")+'">'+navItem("projects",t("Projects","Projects"),page==="projects")+navItem("about","About",page==="about")+navItem("contact","Contact",page==="contact")+'<a href="https://www.instagram.com/svarchitetti/" target="_blank" rel="noopener noreferrer">Instagram</a></nav><div class="rail-bottom"><button type="button" class="lang" data-lang="it" aria-pressed="'+(lang==="it")+'">IT</button><span class="faded">/</span><button type="button" class="lang" data-lang="en" aria-pressed="'+(lang==="en")+'">EN</button></div><span class="credit">© '+new Date().getFullYear()+' Sara Valleri Architetti</span></aside>';}
 function home(){
  const images=site.homeImages||[];
@@ -349,6 +381,7 @@ function render(scroll=true,decodedHomeImage=null){
  }
  activateProgressiveProjectGallery();
  document.title=(p?p.title+" — ":r.page!=="home"?r.page.charAt(0).toUpperCase()+r.page.slice(1)+" — ":"")+"Sara Valleri Architetti";
+ updateSearchMetadata(r,p);
  if(r.page==="home"){
   const frame=root.querySelector(".home-page");
   homeWanted=Number(frame?.dataset.homeIndex||0);
